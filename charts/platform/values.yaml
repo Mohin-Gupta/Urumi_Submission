@@ -1,0 +1,34 @@
+# Public hosts are store.<domain> and app.<domain>
+domain: 127.0.0.1.nip.io
+
+ingress:
+  className: traefik
+  tls: false
+  annotations: {}
+
+# Empty means the cluster's default StorageClass
+storageClass: ""
+
+mariadb:
+  image: mariadb:11.4
+  storage: 2Gi
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+store:
+  # Core files live on the volume, so the setup Job updates them to this version
+  wordpressVersion: "7.0"
+  cliImage: wordpress:cli-2.12-php8.3
+  storage: 2Gi
+  title: Urumi Store
+  adminUser: admin
+  adminEmail: admin@example.com
+  timezone: Asia/Kolkata
+  currency: INR
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  setupResources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { cpu: "1", memory: 768Mi }

@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: store-setup
+  labels: {{- include "platform.labels" "store-setup" | nindent 4 }}
+data:
+  setup.sh: {{ .Files.Get "files/store-setup.sh" | quote }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: store-setup
+  labels: {{- include "platform.labels" "store-setup" | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 900
+  template:
+    metadata:
+      labels: {{- include "platform.labels" "store-setup" | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      # Shares WordPress's ReadWriteOnce volume, so it must land on the same node
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels: {{- include "platform.selector" "wordpress" | nindent 18 }}
+              topologyKey: kubernetes.io/hostname
+      # Match the Apache image's www-data user so files stay writable by WordPress
+      securityContext:
+        runAsUser: 33
+        runAsGroup: 33
+      containers:
+        - name: setup
+          image: {{ .Values.store.cliImage }}
+          command: [sh, /scripts/setup.sh]
+          env:
+            {{- include "store.dbEnv" . | nindent 12 }}
+            - name: HOME
+              value: /tmp
+            - name: STORE_URL
+              value: {{ include "platform.url" (dict "root" . "sub" "store") }}
+            - name: WP_VERSION
+              value: {{ .Values.store.wordpressVersion | quote }}
+            - name: STORE_TITLE
+              value: {{ .Values.store.title | quote }}
+            - name: ADMIN_USER
+              value: {{ .Values.store.adminUser }}
+            - name: ADMIN_EMAIL
+              value: {{ .Values.store.adminEmail }}
+            - name: TIMEZONE
+              value: {{ .Values.store.timezone }}
+            - name: CURRENCY
+              value: {{ .Values.store.currency }}
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: store-secrets, key: admin-password }
+            - name: WC_CONSUMER_KEY
+              valueFrom:
+                secretKeyRef: { name: store-secrets, key: wc-consumer-key }
+            - name: WC_CONSUMER_SECRET
+              valueFrom:
+                secretKeyRef: { name: store-secrets, key: wc-consumer-secret }
+          resources: {{- toYaml .Values.store.setupResources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/www/html
+            - name: scripts
+              mountPath: /scripts
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: wordpress-data
+        - name: scripts
+          configMap:
+            name: store-setup
