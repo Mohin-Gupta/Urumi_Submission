@@ -132,8 +132,9 @@ spec:
             httpGet: { path: /healthz, port: 8080 }
             periodSeconds: 20
           resources: {{- toYaml .Values.gateway.resources | nindent 12 }}
-          securityContext: {{- include "platform.securityContext" . | nindent 12 }}
+          securityContext: {{- include "platform.securityContext" 1000 | nindent 12 }}
 ---
 {{ include "platform.ingress" (dict "root" . "name" "app" "sub" "app" "paths" (list
   (dict "path" "/api" "service" "gateway" "port" 80)
-  (dict "path" "/mcp" "service" "gateway" "port" 80))) }}
+  (dict "path" "/mcp" "service" "gateway" "port" 80)
+  (dict "path" "/" "service" "dashboard" "port" 80))) }}

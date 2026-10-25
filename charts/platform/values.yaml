@@ -18,6 +18,12 @@ images:
   mcpServers: urumi/mcp-servers:0.1.2
   everything: urumi/everything-mcp:2.0.1
   gateway: urumi/gateway:0.1.1
+  dashboard: urumi/dashboard:0.1.1
+
+dashboard:
+  resources:
+    requests: { cpu: 20m, memory: 32Mi }
+    limits: { cpu: 200m, memory: 128Mi }
 
 gateway:
   adminEmail: admin@example.com

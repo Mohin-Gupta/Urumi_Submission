@@ -34,10 +34,10 @@ app.kubernetes.io/part-of: platform
     secretKeyRef: { name: store-secrets, key: db-password }
 {{- end }}
 
-{{/* For our own images, which all run as the non-root "node" user */}}
+{{/* Hardened container defaults; pass the image's numeric non-root user id */}}
 {{- define "platform.securityContext" -}}
 runAsNonRoot: true
-runAsUser: 1000
+runAsUser: {{ . }}
 allowPrivilegeEscalation: false
 readOnlyRootFilesystem: true
 capabilities:
@@ -93,7 +93,7 @@ spec:
             {{- toYaml .probe | nindent 12 }}
             periodSeconds: 20
           resources: {{- toYaml .root.Values.mcpServerResources | nindent 12 }}
-          securityContext: {{- include "platform.securityContext" . | nindent 12 }}
+          securityContext: {{- include "platform.securityContext" 1000 | nindent 12 }}
 {{- end }}
 
 {{- define "platform.storageClass" -}}

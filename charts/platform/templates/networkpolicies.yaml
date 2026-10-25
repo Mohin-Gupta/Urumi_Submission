@@ -62,10 +62,11 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: gateway
+  name: public-apps
 spec:
   podSelector:
-    matchLabels: {{- include "platform.selector" "gateway" | nindent 6 }}
+    matchExpressions:
+      - { key: app.kubernetes.io/name, operator: In, values: [gateway, dashboard] }
   ingress:
     - from:
         {{- include "netpol.fromIngressController" . | nindent 8 }}
