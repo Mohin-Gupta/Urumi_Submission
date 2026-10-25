@@ -19,8 +19,8 @@ export const config = {
   healthIntervalMs: Number(env("HEALTH_INTERVAL_MS", "10000")),
   connectTimeoutMs: 5000,
   llm: {
-    baseUrl: env("LLM_BASE_URL", "https://api.groq.com/openai/v1"),
-    model: env("LLM_MODEL", "openai/gpt-oss-120b"),
+    baseUrl: env("LLM_BASE_URL"),
+    model: env("LLM_MODEL"),
     apiKey: process.env.LLM_API_KEY,
   },
 };

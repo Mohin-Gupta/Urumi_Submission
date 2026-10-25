@@ -24,7 +24,7 @@ certManager:
 images:
   mcpServers: urumi/mcp-servers:0.1.3
   everything: urumi/everything-mcp:2.0.1
-  gateway: urumi/gateway:0.4.0
+  gateway: urumi/gateway:0.4.2
   dashboard: urumi/dashboard:0.2.2
 
 dashboard:
@@ -47,8 +47,8 @@ gateway:
 # Any OpenAI-compatible chat API. The key is never in values; create it with:
 #   kubectl -n urumi create secret generic llm-secrets --from-literal=api-key=<key>
 llm:
-  baseUrl: https://api.groq.com/openai/v1
-  model: openai/gpt-oss-120b
+  baseUrl: https://generativelanguage.googleapis.com/v1beta/openai
+  model: gemini-2.5-flash
 
 postgres:
   image: postgres:17-alpine

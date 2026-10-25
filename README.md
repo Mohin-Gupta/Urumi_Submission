@@ -119,14 +119,15 @@ Thus, you do not edit the hosts file, and both browsers and MCP clients can reso
      -f charts/platform/values-local.yaml --wait --timeout 15m
    ```
 
-5. Add an API key for the chat agent. Groq and Gemini have free tiers. Skip this step if you do not use the chat.
+5. Add a Gemini API key for the chat agent. Get a free key at [Google AI Studio](https://aistudio.google.com/apikey). Skip this step if you do not use the chat.
 
    ```bash
    kubectl -n urumi create secret generic llm-secrets --from-literal=api-key=<your-key>
    kubectl -n urumi rollout restart deploy/gateway
    ```
 
-   The default provider is Groq. To use Gemini, see [Configuration](#configuration).
+   The free tier allows a small number of requests each minute. If the chat shows a rate-limit message, wait one minute.
+   To use a different provider, see [Configuration](#configuration).
 
 ### Get the passwords
 
@@ -353,15 +354,15 @@ These values are the most useful. See [`values.yaml`](charts/platform/values.yam
 | `store.timezone` | `Asia/Kolkata` | Store timezone. "Today" in `list_orders` uses this timezone. |
 | `gateway.callTimeoutMs` | `30000` | Timeout for each tool call |
 | `gateway.seedServers` | 3 servers | Servers that the gateway registers at first start |
-| `llm.baseUrl` | Groq | Any OpenAI-compatible API |
-| `llm.model` | `openai/gpt-oss-120b` | Model for the chat agent |
+| `llm.baseUrl` | Gemini | Any OpenAI-compatible API |
+| `llm.model` | `gemini-2.5-flash` | Model for the chat agent |
 
-To use Gemini for the chat, set these values. Use a model name from the current Gemini model list.
+The chat agent works with each API that is compatible with OpenAI. For example, to use Groq, set these values and put a Groq key in `llm-secrets`:
 
 ```yaml
 llm:
-  baseUrl: https://generativelanguage.googleapis.com/v1beta/openai
-  model: gemini-2.5-flash
+  baseUrl: https://api.groq.com/openai/v1
+  model: openai/gpt-oss-120b
 ```
 
 ## Repository layout

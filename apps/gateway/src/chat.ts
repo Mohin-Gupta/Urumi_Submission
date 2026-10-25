@@ -41,7 +41,10 @@ async function complete(messages: Message[]) {
     signal: AbortSignal.timeout(60_000),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new HttpError(502, `The language model returned an error: ${data.error?.message ?? res.status}`);
+  if (res.status === 429) throw new HttpError(429, "The language model's rate limit was reached. Wait a minute and try again.");
+  // Gemini wraps errors in an array, OpenAI-style APIs don't
+  const error = (Array.isArray(data) ? data[0] : data)?.error?.message;
+  if (!res.ok) throw new HttpError(502, `The language model returned an error: ${error ?? res.status}`);
   return data.choices[0].message as Extract<Message, { role: "assistant" }>;
 }
 
