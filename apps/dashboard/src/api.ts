@@ -34,6 +34,9 @@ export type AuditRow = {
   source: "mcp" | "chat";
 };
 
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+export type ToolStep = { tool: string; args: unknown; ok: boolean; output: string };
+
 export async function api<T = void>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
   const { body, method = body ? "POST" : "GET" } = options;
   const res = await fetch(`/api${path}`, {

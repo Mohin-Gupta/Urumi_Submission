@@ -17,8 +17,8 @@ storageClass: ""
 images:
   mcpServers: urumi/mcp-servers:0.1.2
   everything: urumi/everything-mcp:2.0.1
-  gateway: urumi/gateway:0.1.1
-  dashboard: urumi/dashboard:0.1.1
+  gateway: urumi/gateway:0.2.0
+  dashboard: urumi/dashboard:0.2.1
 
 dashboard:
   resources:
@@ -36,6 +36,12 @@ gateway:
   resources:
     requests: { cpu: 100m, memory: 128Mi }
     limits: { cpu: "1", memory: 512Mi }
+
+# Any OpenAI-compatible chat API. The key is never in values; create it with:
+#   kubectl -n urumi create secret generic llm-secrets --from-literal=api-key=<key>
+llm:
+  baseUrl: https://api.groq.com/openai/v1
+  model: openai/gpt-oss-120b
 
 postgres:
   image: postgres:17-alpine

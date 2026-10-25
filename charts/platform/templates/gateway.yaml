@@ -125,6 +125,14 @@ spec:
               value: {{ toJson .Values.gateway.seedServers | quote }}
             - name: CALL_TIMEOUT_MS
               value: {{ .Values.gateway.callTimeoutMs | quote }}
+            - name: LLM_BASE_URL
+              value: {{ .Values.llm.baseUrl }}
+            - name: LLM_MODEL
+              value: {{ .Values.llm.model }}
+            # Optional so the gateway still runs before an LLM key is added; chat says it isn't set up
+            - name: LLM_API_KEY
+              valueFrom:
+                secretKeyRef: { name: llm-secrets, key: api-key, optional: true }
           readinessProbe:
             httpGet: { path: /readyz, port: 8080 }
             periodSeconds: 10

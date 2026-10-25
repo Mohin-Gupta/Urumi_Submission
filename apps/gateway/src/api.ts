@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 import { z } from "zod";
+import { runChat } from "./chat.js";
 import { config } from "./config.js";
 import { encrypt, hashPassword, randomToken, sha256, verifyPassword } from "./crypto.js";
 import { db, type User } from "./db.js";
@@ -210,6 +211,18 @@ api.delete("/servers/:id", requireAdmin, async (req, res) => {
   await db.query("delete from servers where id = $1", [id]);
   await reload(id);
   res.status(204).end();
+});
+
+// Chat agent: runs as the signed-in user, so its tool calls are audited under them
+
+api.post("/chat", async (req, res) => {
+  const { messages } = parse(
+    z.object({
+      messages: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).min(1).max(50),
+    }),
+    req.body,
+  );
+  res.json(await runChat(req.user, messages));
 });
 
 // Audit log

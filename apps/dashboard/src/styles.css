@@ -488,6 +488,116 @@ tr.dim td {
   justify-content: flex-end;
 }
 
+/* Chat */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 16px;
+  max-width: 760px;
+}
+
+.suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.suggestions button {
+  text-align: left;
+}
+
+.turn p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.turn-user {
+  align-self: flex-end;
+  max-width: 80%;
+  background: var(--ink);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+}
+
+.turn-assistant {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  padding: 14px 16px;
+  border-radius: var(--radius);
+}
+
+.steps {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.steps summary {
+  cursor: pointer;
+  color: var(--green);
+}
+
+.steps summary.failed {
+  color: var(--red);
+}
+
+.steps pre {
+  font: 0.8rem/1.4 var(--mono);
+  background: var(--paper);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+}
+
+.thinking {
+  margin: 0;
+}
+
+.composer {
+  position: sticky;
+  bottom: 16px;
+  display: flex;
+  gap: 8px;
+  max-width: 760px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 8px;
+}
+
+.composer textarea {
+  flex: 1;
+  border: none;
+  resize: none;
+  font: 15px/1.5 var(--sans);
+  color: var(--ink);
+  padding: 6px 8px;
+}
+
+.composer textarea:focus-visible {
+  outline: none;
+}
+
+.composer:focus-within {
+  outline: 2px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+.composer button {
+  align-self: flex-end;
+}
+
 /* Sign in */
 
 .signin {

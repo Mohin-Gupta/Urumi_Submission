@@ -1,6 +1,7 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { api, type User } from "./api";
 import { Audit } from "./pages/Audit";
+import { Chat } from "./pages/Chat";
 import { Keys } from "./pages/Keys";
 import { Servers } from "./pages/Servers";
 import { SignIn } from "./pages/SignIn";
@@ -8,6 +9,7 @@ import { Team } from "./pages/Team";
 
 const PAGES = [
   { path: "/", label: "Servers", page: Servers },
+  { path: "/chat", label: "Chat", page: Chat },
   { path: "/keys", label: "API keys", page: Keys },
   { path: "/team", label: "Team", page: Team, adminOnly: true },
   { path: "/audit", label: "Audit log", page: Audit },
