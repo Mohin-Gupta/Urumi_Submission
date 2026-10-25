@@ -44,6 +44,58 @@ capabilities:
   drop: [ALL]
 {{- end }}
 
+{{/*
+An upstream MCP server: ClusterIP Service + Deployment, no Ingress.
+The mcp-upstream label is what the NetworkPolicy uses to let only the gateway in.
+*/}}
+{{- define "platform.mcpServer" -}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}
+  labels: {{- include "platform.labels" .name | nindent 4 }}
+spec:
+  selector: {{- include "platform.selector" .name | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}
+  labels: {{- include "platform.labels" .name | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{- include "platform.selector" .name | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "platform.labels" .name | nindent 8 }}
+        mcp-upstream: "true"
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: {{ .image }}
+          {{- with .command }}
+          command: {{ toJson . }}
+          {{- end }}
+          ports:
+            - containerPort: 8080
+          {{- with .env }}
+          env: {{- . | nindent 12 }}
+          {{- end }}
+          readinessProbe:
+            {{- toYaml .probe | nindent 12 }}
+            periodSeconds: 10
+          livenessProbe:
+            {{- toYaml .probe | nindent 12 }}
+            periodSeconds: 20
+          resources: {{- toYaml .root.Values.mcpServerResources | nindent 12 }}
+          securityContext: {{- include "platform.securityContext" . | nindent 12 }}
+{{- end }}
+
 {{- define "platform.storageClass" -}}
 {{- with .Values.storageClass }}
 storageClassName: {{ . }}

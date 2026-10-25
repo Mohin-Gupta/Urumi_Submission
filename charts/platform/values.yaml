@@ -5,12 +5,18 @@ ingress:
   className: traefik
   tls: false
   annotations: {}
+  # Where the ingress controller runs, so NetworkPolicies can let it in
+  controller:
+    namespace: kube-system
+    podLabels:
+      app.kubernetes.io/name: traefik
 
 # Empty means the cluster's default StorageClass
 storageClass: ""
 
 images:
-  mcpServers: urumi/mcp-servers:0.1.1
+  mcpServers: urumi/mcp-servers:0.1.2
+  everything: urumi/everything-mcp:2.0.1
 
 mcpServerResources:
   requests: { cpu: 50m, memory: 64Mi }

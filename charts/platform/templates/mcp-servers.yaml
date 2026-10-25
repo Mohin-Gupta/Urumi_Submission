@@ -1,0 +1,25 @@
+{{- define "woo-mcp.env" -}}
+- name: WOO_URL
+  value: http://wordpress
+- name: STORE_URL
+  value: {{ include "platform.url" (dict "root" . "sub" "store") }}
+- name: STORE_TIMEZONE
+  value: {{ .Values.store.timezone }}
+- name: WOO_KEY
+  valueFrom:
+    secretKeyRef: { name: store-secrets, key: wc-consumer-key }
+- name: WOO_SECRET
+  valueFrom:
+    secretKeyRef: { name: store-secrets, key: wc-consumer-secret }
+{{- end }}
+
+{{- $health := dict "httpGet" (dict "path" "/healthz" "port" 8080) }}
+
+{{ include "platform.mcpServer" (dict "root" . "name" "woo-mcp" "image" .Values.images.mcpServers
+  "command" (list "node" "dist/woo.js") "probe" $health "env" (include "woo-mcp.env" .)) }}
+---
+{{ include "platform.mcpServer" (dict "root" . "name" "notes-mcp" "image" .Values.images.mcpServers
+  "command" (list "node" "dist/notes.js") "probe" $health) }}
+---
+{{ include "platform.mcpServer" (dict "root" . "name" "everything-mcp" "image" .Values.images.everything
+  "probe" (dict "tcpSocket" (dict "port" 8080))) }}
