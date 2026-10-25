@@ -9,6 +9,13 @@ ingress:
 # Empty means the cluster's default StorageClass
 storageClass: ""
 
+images:
+  mcpServers: urumi/mcp-servers:0.1.1
+
+mcpServerResources:
+  requests: { cpu: 50m, memory: 64Mi }
+  limits: { cpu: 500m, memory: 256Mi }
+
 mariadb:
   image: mariadb:11.4
   storage: 2Gi

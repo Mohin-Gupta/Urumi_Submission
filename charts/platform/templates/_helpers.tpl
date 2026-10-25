@@ -34,6 +34,16 @@ app.kubernetes.io/part-of: platform
     secretKeyRef: { name: store-secrets, key: db-password }
 {{- end }}
 
+{{/* For our own images, which all run as the non-root "node" user */}}
+{{- define "platform.securityContext" -}}
+runAsNonRoot: true
+runAsUser: 1000
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
+capabilities:
+  drop: [ALL]
+{{- end }}
+
 {{- define "platform.storageClass" -}}
 {{- with .Values.storageClass }}
 storageClassName: {{ . }}
