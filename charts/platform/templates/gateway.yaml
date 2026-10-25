@@ -1,0 +1,139 @@
+{{- $s := dict "root" . "name" "gateway-secrets" -}}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gateway-secrets
+  labels: {{- include "platform.labels" "gateway" | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+type: Opaque
+data:
+  postgres-password: {{ include "platform.secretValue" (merge (dict "key" "postgres-password" "value" (randAlphaNum 24)) $s) }}
+  encryption-key: {{ include "platform.secretValue" (merge (dict "key" "encryption-key" "value" (randAlphaNum 32)) $s) }}
+  admin-password: {{ include "platform.secretValue" (merge (dict "key" "admin-password" "value" (randAlphaNum 16)) $s) }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels: {{- include "platform.labels" "postgres" | nindent 4 }}
+spec:
+  clusterIP: None
+  selector: {{- include "platform.selector" "postgres" | nindent 4 }}
+  ports:
+    - port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels: {{- include "platform.labels" "postgres" | nindent 4 }}
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: {{- include "platform.selector" "postgres" | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "platform.labels" "postgres" | nindent 8 }}
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.image }}
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: gateway
+            - name: POSTGRES_USER
+              value: gateway
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: gateway-secrets, key: postgres-password }
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, gateway, -d, gateway]
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: [pg_isready, -U, gateway, -d, gateway]
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          resources: {{- toYaml .Values.postgres.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- include "platform.storageClass" . | indent 8 }}
+        resources:
+          requests:
+            storage: {{ .Values.postgres.storage }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  labels: {{- include "platform.labels" "gateway" | nindent 4 }}
+spec:
+  selector: {{- include "platform.selector" "gateway" | nindent 4 }}
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels: {{- include "platform.labels" "gateway" | nindent 4 }}
+spec:
+  # MCP sessions live in memory, so keep one replica until sessions are shared
+  replicas: 1
+  selector:
+    matchLabels: {{- include "platform.selector" "gateway" | nindent 6 }}
+  template:
+    metadata:
+      labels: {{- include "platform.labels" "gateway" | nindent 8 }}
+    spec:
+      containers:
+        - name: gateway
+          image: {{ .Values.images.gateway }}
+          ports:
+            - containerPort: 8080
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: gateway-secrets, key: postgres-password }
+            - name: DATABASE_URL
+              value: postgres://gateway:$(POSTGRES_PASSWORD)@postgres:5432/gateway
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef: { name: gateway-secrets, key: encryption-key }
+            - name: ADMIN_EMAIL
+              value: {{ .Values.gateway.adminEmail }}
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: gateway-secrets, key: admin-password }
+            - name: PUBLIC_URL
+              value: {{ include "platform.url" (dict "root" . "sub" "app") }}
+            - name: SEED_SERVERS
+              value: {{ toJson .Values.gateway.seedServers | quote }}
+            - name: CALL_TIMEOUT_MS
+              value: {{ .Values.gateway.callTimeoutMs | quote }}
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8080 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 8080 }
+            periodSeconds: 20
+          resources: {{- toYaml .Values.gateway.resources | nindent 12 }}
+          securityContext: {{- include "platform.securityContext" . | nindent 12 }}
+---
+{{ include "platform.ingress" (dict "root" . "name" "app" "sub" "app" "paths" (list
+  (dict "path" "/api" "service" "gateway" "port" 80)
+  (dict "path" "/mcp" "service" "gateway" "port" 80))) }}

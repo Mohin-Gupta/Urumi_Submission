@@ -17,6 +17,26 @@ storageClass: ""
 images:
   mcpServers: urumi/mcp-servers:0.1.2
   everything: urumi/everything-mcp:2.0.1
+  gateway: urumi/gateway:0.1.1
+
+gateway:
+  adminEmail: admin@example.com
+  callTimeoutMs: 30000
+  # Registered on first boot only; after that admins manage servers in the dashboard
+  seedServers:
+    - { slug: woo, name: WooCommerce, url: "http://woo-mcp/mcp" }
+    - { slug: notes, name: Team Notes, url: "http://notes-mcp/mcp" }
+    - { slug: everything, name: MCP Everything, url: "http://everything-mcp/mcp" }
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: "1", memory: 512Mi }
+
+postgres:
+  image: postgres:17-alpine
+  storage: 1Gi
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: "1", memory: 512Mi }
 
 mcpServerResources:
   requests: { cpu: 50m, memory: 64Mi }
