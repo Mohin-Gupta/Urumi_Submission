@@ -6,6 +6,7 @@ import { config } from "./config.js";
 import { decrypt } from "./crypto.js";
 import { db } from "./db.js";
 import { errorMessage } from "./http.js";
+import { checkUpstreamUrl } from "./urlGuard.js";
 
 type ServerRow = {
   id: number;
@@ -34,6 +35,7 @@ const upstreams = new Map<number, Upstream>();
 export const events = new EventEmitter();
 
 async function connect(server: ServerRow) {
+  await checkUpstreamUrl(server.url);
   const headers: Record<string, string> = {};
   if (server.header_name && server.header_value_enc) headers[server.header_name] = decrypt(server.header_value_enc);
   const client = new Client({ name: "urumi-gateway", version: "0.1.0" });
@@ -57,7 +59,8 @@ async function check(server: ServerRow): Promise<Upstream> {
     return { server, client, status: "connected", tools, checkedAt };
   } catch (err) {
     await previous?.client?.close().catch(() => {});
-    return { server, status: "unreachable", tools: [], error: errorMessage(err), checkedAt };
+    // Upstreams control this text (it can be a whole HTML page), so keep it short
+    return { server, status: "unreachable", tools: [], error: errorMessage(err).slice(0, 300), checkedAt };
   }
 }
 

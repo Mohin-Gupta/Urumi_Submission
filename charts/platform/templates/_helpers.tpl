@@ -77,7 +77,7 @@ spec:
     spec:
       containers:
         - name: {{ .name }}
-          image: {{ .image }}
+          image: {{ .root.Values.imageRegistry }}{{ .image }}
           {{- with .command }}
           command: {{ toJson . }}
           {{- end }}

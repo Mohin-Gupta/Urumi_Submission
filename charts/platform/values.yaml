@@ -14,10 +14,17 @@ ingress:
 # Empty means the cluster's default StorageClass
 storageClass: ""
 
+# Prefix for our own images, with a trailing slash (e.g. ghcr.io/you/). Empty = images imported into the cluster.
+imageRegistry: ""
+
+# When set, the chart creates a Let's Encrypt ClusterIssuer named "letsencrypt" (needs cert-manager installed)
+certManager:
+  issuerEmail: ""
+
 images:
   mcpServers: urumi/mcp-servers:0.1.2
   everything: urumi/everything-mcp:2.0.1
-  gateway: urumi/gateway:0.2.0
+  gateway: urumi/gateway:0.3.2
   dashboard: urumi/dashboard:0.2.1
 
 dashboard:

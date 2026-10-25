@@ -4,13 +4,17 @@ function env(name: string, fallback?: string) {
   return value;
 }
 
+const seedServers = JSON.parse(env("SEED_SERVERS", "[]")) as { slug: string; name: string; url: string }[];
+
 export const config = {
   databaseUrl: env("DATABASE_URL"),
   encryptionKey: env("ENCRYPTION_KEY"),
   adminEmail: env("ADMIN_EMAIL"),
   adminPassword: env("ADMIN_PASSWORD"),
   publicUrl: env("PUBLIC_URL"),
-  seedServers: JSON.parse(env("SEED_SERVERS", "[]")) as { slug: string; name: string; url: string }[],
+  seedServers,
+  // The platform's own in-cluster MCP services: the only private hosts an upstream may use
+  internalHosts: new Set(seedServers.map((s) => new URL(s.url).hostname)),
   callTimeoutMs: Number(env("CALL_TIMEOUT_MS", "30000")),
   healthIntervalMs: Number(env("HEALTH_INTERVAL_MS", "10000")),
   connectTimeoutMs: 5000,

@@ -102,7 +102,7 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: {{ .Values.images.gateway }}
+          image: {{ .Values.imageRegistry }}{{ .Values.images.gateway }}
           ports:
             - containerPort: 8080
           env:

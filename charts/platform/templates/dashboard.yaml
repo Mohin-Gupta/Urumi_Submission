@@ -24,7 +24,7 @@ spec:
     spec:
       containers:
         - name: dashboard
-          image: {{ .Values.images.dashboard }}
+          image: {{ .Values.imageRegistry }}{{ .Values.images.dashboard }}
           ports:
             - containerPort: 8080
           readinessProbe:

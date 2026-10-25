@@ -6,6 +6,7 @@ import { encrypt, hashPassword, randomToken, sha256, verifyPassword } from "./cr
 import { db, type User } from "./db.js";
 import { HttpError, parse } from "./http.js";
 import { reload, serverStatus } from "./upstreams.js";
+import { checkUpstreamUrl } from "./urlGuard.js";
 
 declare global {
   namespace Express {
@@ -168,6 +169,13 @@ const serverFields = z.object({
   ]),
 });
 
+async function rejectPrivateUrl(url?: string) {
+  if (!url) return;
+  await checkUpstreamUrl(url).catch((err: Error) => {
+    throw new HttpError(400, err.message);
+  });
+}
+
 function credentialColumns(auth: z.infer<typeof serverFields>["auth"]) {
   if (auth.type === "none") return { header_name: null, header_value_enc: null };
   if (auth.type === "bearer") return { header_name: "Authorization", header_value_enc: encrypt(`Bearer ${auth.token}`) };
@@ -180,6 +188,7 @@ api.get("/servers", (_req, res) => {
 
 api.post("/servers", requireAdmin, async (req, res) => {
   const { auth, ...s } = parse(serverFields.partial({ enabled: true, auth: true }), req.body);
+  await rejectPrivateUrl(s.url);
   const creds = credentialColumns(auth ?? { type: "none" });
   const { rows } = await db.query(
     `insert into servers (slug, name, url, enabled, header_name, header_value_enc)
@@ -193,6 +202,7 @@ api.post("/servers", requireAdmin, async (req, res) => {
 api.patch("/servers/:id", requireAdmin, async (req, res) => {
   const id = idParam(req);
   const { auth, ...fields } = parse(serverFields.partial(), req.body);
+  await rejectPrivateUrl(fields.url);
   // Leaving auth out keeps the stored credential, since the dashboard never sees it
   const changes = Object.entries({ ...fields, ...(auth && credentialColumns(auth)) });
   if (changes.length) {
