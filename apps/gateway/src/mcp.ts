@@ -14,7 +14,7 @@ import { config } from "./config.js";
 import { sha256 } from "./crypto.js";
 import { db, type User } from "./db.js";
 import { errorMessage } from "./http.js";
-import { SEPARATOR, events, findUpstream, listTools } from "./upstreams.js";
+import { SEPARATOR, events, findUpstream, listTools, refresh } from "./upstreams.js";
 
 const errorResult = (text: string): CallToolResult => ({ isError: true, content: [{ type: "text", text }] });
 
@@ -53,6 +53,9 @@ export async function callTool(user: User, name: string, args: Record<string, un
       result = errorResult(
         timedOut ? `Server "${slug}" timed out after ${config.callTimeoutMs / 1000}s` : `Server "${slug}" failed: ${errorMessage(err)}`,
       );
+      // Re-check now so a restarted upstream recovers on the next call. We never retry here:
+      // the failed call may have been a write that already happened.
+      if (!timedOut) refresh();
     }
   }
 
@@ -88,13 +91,23 @@ function createServer(user: User) {
   return server;
 }
 
-type Session = { transport: StreamableHTTPServerTransport; server: Server; userId: number };
+type Session = { transport: StreamableHTTPServerTransport; server: Server; userId: number; lastSeen: number };
 const sessions = new Map<string, Session>();
+const SESSION_IDLE_MS = 30 * 60 * 1000;
 
 // Tell connected clients to re-fetch tools when a server is added, disabled or goes down
 events.on("toolsChanged", () => {
   for (const { server } of sessions.values()) server.sendToolListChanged().catch(() => {});
 });
+
+// Clients often vanish without ending their session. A closed session makes them re-initialize.
+setInterval(() => {
+  for (const session of sessions.values()) {
+    if (Date.now() - session.lastSeen > SESSION_IDLE_MS) session.transport.close();
+  }
+}, 60_000).unref();
+
+export const closeSessions = () => Promise.all([...sessions.values()].map((s) => s.transport.close()));
 
 const rpcError = (message: string) => ({ jsonrpc: "2.0", error: { code: -32000, message }, id: null });
 
@@ -104,7 +117,7 @@ mcp.all("/mcp", async (req, res) => {
   // Checked on every request, so revoking a key cuts off open sessions immediately
   const { user, error } = await authenticate(req.headers.authorization);
   if (error || !user) {
-    if (user && req.body?.method === "tools/call") await audit(user, req.body.params?.name ?? "unknown", 0, error!, "mcp");
+    if (user && req.body?.method === "tools/call") await audit(user, String(req.body.params?.name ?? "unknown"), 0, error!, "mcp");
     return res.status(401).json(rpcError(error!));
   }
 
@@ -117,16 +130,18 @@ mcp.all("/mcp", async (req, res) => {
     const transport: StreamableHTTPServerTransport = new StreamableHTTPServerTransport({
       sessionIdGenerator: randomUUID,
       onsessioninitialized: (id) => {
-        sessions.set(id, { transport, server, userId: user.id });
+        sessions.set(id, newSession);
       },
     });
     transport.onclose = () => {
       if (transport.sessionId) sessions.delete(transport.sessionId);
     };
     const server = createServer(user);
+    const newSession: Session = { transport, server, userId: user.id, lastSeen: Date.now() };
     await server.connect(transport);
-    session = { transport, server, userId: user.id };
+    session = newSession;
   }
 
+  session.lastSeen = Date.now();
   await session.transport.handleRequest(req, res, req.body);
 });

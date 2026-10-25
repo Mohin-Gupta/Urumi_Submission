@@ -1,11 +1,10 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import express from "express";
 import { api } from "./api.js";
-import { config } from "./config.js";
 import { db, migrate } from "./db.js";
 import { errorHandler } from "./http.js";
-import { mcp } from "./mcp.js";
-import { refresh } from "./upstreams.js";
+import { closeSessions, mcp } from "./mcp.js";
+import { startHealthChecks } from "./upstreams.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -33,6 +32,13 @@ for (let attempt = 1; ; attempt++) {
   }
 }
 
-await refresh();
-setInterval(refresh, config.healthIntervalMs);
-app.listen(8080, () => console.log("Gateway listening on :8080"));
+await startHealthChecks();
+const server = app.listen(8080, () => console.log("Gateway listening on :8080"));
+
+// On rollout, finish in-flight requests before exiting. Open MCP streams are closed so clients reconnect.
+process.on("SIGTERM", () => {
+  console.log("Shutting down...");
+  server.close(() => db.end().finally(() => process.exit(0)));
+  closeSessions();
+  setTimeout(() => process.exit(0), 10_000).unref();
+});

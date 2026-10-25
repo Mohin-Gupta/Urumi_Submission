@@ -45,6 +45,10 @@ spec:
               value: {{ include "platform.url" (dict "root" . "sub" "store") }}
             - name: WP_VERSION
               value: {{ .Values.store.wordpressVersion | quote }}
+            - name: WC_VERSION
+              value: {{ .Values.store.woocommerceVersion | quote }}
+            - name: STOREFRONT_VERSION
+              value: {{ .Values.store.storefrontVersion | quote }}
             - name: STORE_TITLE
               value: {{ .Values.store.title | quote }}
             - name: ADMIN_USER

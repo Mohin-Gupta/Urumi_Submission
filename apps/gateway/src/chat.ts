@@ -54,7 +54,8 @@ export async function runChat(user: User, history: ChatTurn[]) {
 
   for (let i = 0; i < MAX_STEPS; i++) {
     const reply = await complete(messages);
-    messages.push(reply);
+    // Send back only standard fields; some providers reject extras like "reasoning"
+    messages.push({ role: "assistant", content: reply.content, tool_calls: reply.tool_calls });
     if (!reply.tool_calls?.length) return { reply: reply.content ?? "", steps };
 
     for (const call of reply.tool_calls) {

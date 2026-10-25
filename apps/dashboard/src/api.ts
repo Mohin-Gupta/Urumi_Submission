@@ -10,6 +10,7 @@ export type Server = {
   authHeader: string | null;
   status: "connected" | "unreachable" | "disabled";
   error?: string;
+  warning?: string;
   checkedAt: string;
   tools: Tool[];
 };

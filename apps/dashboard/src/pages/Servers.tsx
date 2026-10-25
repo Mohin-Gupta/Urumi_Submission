@@ -107,7 +107,7 @@ function ServerRow({ server, isAdmin, onChange }: { server: Server; isAdmin: boo
           {server.tools.length} {server.tools.length === 1 ? "tool" : "tools"}
         </button>
       </div>
-      {server.error && <p className="line-error">{server.error}</p>}
+      {(server.error || server.warning) && <p className="line-error">{server.error ?? server.warning}</p>}
       {open && (
         <ul className="tools">
           {server.tools.map((t) => (

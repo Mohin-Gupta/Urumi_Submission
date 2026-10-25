@@ -20,6 +20,7 @@ const SESSION_DAYS = 7;
 
 async function startSession(res: Response, userId: number) {
   const token = randomToken();
+  await db.query("delete from sessions where expires_at < now()");
   await db.query(
     `insert into sessions (token_hash, user_id, expires_at) values ($1, $2, now() + interval '${SESSION_DAYS} days')`,
     [sha256(token), userId],
@@ -165,7 +166,11 @@ const serverFields = z.object({
   auth: z.discriminatedUnion("type", [
     z.object({ type: z.literal("none") }),
     z.object({ type: z.literal("bearer"), token: z.string().min(1) }),
-    z.object({ type: z.literal("header"), name: z.string().min(1), value: z.string().min(1) }),
+    z.object({
+      type: z.literal("header"),
+      name: z.string().regex(/^[A-Za-z0-9-]{1,64}$/, "Header names use letters, digits and dashes"),
+      value: z.string().min(1),
+    }),
   ]),
 });
 

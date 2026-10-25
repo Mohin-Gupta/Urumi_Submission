@@ -22,10 +22,10 @@ certManager:
   issuerEmail: ""
 
 images:
-  mcpServers: urumi/mcp-servers:0.1.2
+  mcpServers: urumi/mcp-servers:0.1.3
   everything: urumi/everything-mcp:2.0.1
-  gateway: urumi/gateway:0.3.2
-  dashboard: urumi/dashboard:0.2.1
+  gateway: urumi/gateway:0.4.0
+  dashboard: urumi/dashboard:0.2.2
 
 dashboard:
   resources:
@@ -71,6 +71,8 @@ mariadb:
 store:
   # Core files live on the volume, so the setup Job updates them to this version
   wordpressVersion: "7.0"
+  woocommerceVersion: "11.2.1"
+  storefrontVersion: "4.6.2"
   cliImage: wordpress:cli-2.12-php8.3
   storage: 2Gi
   title: Urumi Store

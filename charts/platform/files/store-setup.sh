@@ -20,9 +20,13 @@ wp option update siteurl "$STORE_URL"
 wp option update timezone_string "$TIMEZONE"
 wp rewrite structure '/%postname%/'
 
-wp plugin is-installed woocommerce || wp plugin install woocommerce
+# Pinned versions: install or move to the version in values, then run any database updates
+[ "$(wp plugin get woocommerce --field=version 2>/dev/null)" = "$WC_VERSION" ] ||
+  wp plugin install woocommerce --version="$WC_VERSION" --force
 wp plugin activate woocommerce
-wp theme is-installed storefront || wp theme install storefront
+wp wc update
+[ "$(wp theme get storefront --field=version 2>/dev/null)" = "$STOREFRONT_VERSION" ] ||
+  wp theme install storefront --version="$STOREFRONT_VERSION" --force
 wp theme activate storefront
 
 wp option update woocommerce_currency "$CURRENCY"

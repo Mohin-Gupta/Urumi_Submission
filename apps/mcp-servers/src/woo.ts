@@ -26,7 +26,14 @@ async function woo(path: string, { method = "GET", query = {}, body }: { method?
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(15_000),
   });
-  const data = await res.json();
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    // WordPress shows an HTML page when PHP or the database fails
+    throw new Error(`WooCommerce returned ${res.status} with a non-JSON response; the store may be down`);
+  }
   if (!res.ok) throw new Error(`WooCommerce returned ${res.status}: ${data.message ?? res.statusText}`);
   return data;
 }
@@ -90,7 +97,11 @@ function createServer() {
     {
       description: `List orders, newest first. Dates use the store timezone (${TIMEZONE}).`,
       inputSchema: {
-        date: z.string().optional().describe('"today" or a date as YYYY-MM-DD'),
+        date: z
+          .string()
+          .regex(/^(today|\d{4}-\d{2}-\d{2})$/, 'Use "today" or YYYY-MM-DD')
+          .optional()
+          .describe('"today" or a date as YYYY-MM-DD'),
         status: z.enum(ORDER_STATUSES).optional(),
         limit: z.number().int().min(1).max(100).default(20),
       },
