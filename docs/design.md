@@ -155,6 +155,7 @@ Gemini is the default. Groq and other providers need only new Helm values.
 ## Production changes
 
 The same chart runs on k3d and on k3s. Only the values file changes.
+For this submission, we did not deploy to a live VPS. We tested on k3d, and we checked `values-prod.yaml` with `helm lint` and `helm template`.
 
 | Item | Local | Production | Why |
 |---|---|---|---|

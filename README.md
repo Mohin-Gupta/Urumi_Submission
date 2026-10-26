@@ -29,7 +29,7 @@ Each team member then uses all the tools through one URL and one personal API ke
 - **Chat agent.** The dashboard chat calls the same tools as the signed-in user.
 - **Failure isolation.** A slow or dead upstream server does not stop the other servers. Each call has a timeout.
 - **Credentials stay on the server.** The gateway encrypts upstream credentials and never sends them to a browser or an MCP client.
-- **One Helm chart.** The same chart deploys to k3d on a laptop and to k3s on a VPS. Only the values file changes.
+- **One Helm chart.** The same chart runs on k3d on a laptop and is ready for k3s on a VPS. Only the values file changes.
 
 ## Contents
 
@@ -259,6 +259,10 @@ To start the server again, set `--replicas=1`.
 
 This procedure uses a VPS with Ubuntu and k3s.
 The same chart is used. Only `values-prod.yaml` changes.
+
+> **Note:** For this submission, the system is not deployed to a live VPS.
+> We tested the chart on k3d only.
+> We checked `values-prod.yaml` with `helm lint` and `helm template`.
 
 ### Prepare the VPS
 
