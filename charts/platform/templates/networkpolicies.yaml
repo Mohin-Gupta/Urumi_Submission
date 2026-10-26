@@ -72,6 +72,23 @@ spec:
       ports:
         - port: 8080
 ---
+{{- if .Values.ingress.tls }}
+# Let's Encrypt checks the domain through a temporary cert-manager pod
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: acme-solver
+spec:
+  podSelector:
+    matchLabels:
+      acme.cert-manager.io/http01-solver: "true"
+  ingress:
+    - from:
+        {{- include "netpol.fromIngressController" . | nindent 8 }}
+      ports:
+        - port: 8089
+---
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

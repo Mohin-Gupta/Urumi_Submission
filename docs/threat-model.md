@@ -82,8 +82,8 @@ For admins, a user confirmation before write tools would give stronger protectio
 | The server returns false data | The chat shows each result. The user must check important data. |
 | The server sends very large results | The chat agent cuts each result to 8,000 characters. |
 | The server tries a redirect to send our credential to a different host | The upstream client sets `redirect: "error"`. |
-| An admin adds a URL that points into the cluster or to cloud metadata | The SSRF guard refuses private, loopback, link-local and metadata addresses. It checks again before each new connection. |
-| The server shows a long or harmful error text | The gateway cuts the error text to 300 characters. React shows it as text, not HTML. |
+| An admin adds a URL that points into the cluster or to cloud metadata | The SSRF guard refuses private, loopback, link-local and metadata addresses. It checks again before each new connection. The only exceptions are the hosts of the seed servers in the Helm values, because they are in the cluster by design. |
+| The server shows a long or harmful error text | The gateway cuts connection errors to 300 characters and audit errors to 500 characters. React shows them as text, not HTML. |
 | The server pod attacks other pods | NetworkPolicies let only the gateway reach upstream pods. Only WordPress and the setup job can reach MariaDB. |
 | The server pod sends data out | Egress NetworkPolicies let upstream pods only use DNS. Only `woo-mcp` can also reach WordPress. They cannot reach the internet. |
 
@@ -102,7 +102,7 @@ An external server that an admin adds by URL is outside our control.
 | Use up shared limits | **Partly** | Each user can make 60 tool calls each minute. A member can still use some of the LLM quota, because chat requests have no separate limit. |
 
 **Admins have more power.**
-An admin can issue a key for a member.
+An admin can issue a key for a member through the API.
 The admin sees that key one time, so the admin can make calls that the log shows as the member.
 Only give the admin role to trusted people.
 A better design would let only members make their own keys.

@@ -91,7 +91,7 @@ Thus, you do not edit the hosts file, and both browsers and MCP clients can reso
 1. Clone the repository and go into it.
 
    ```bash
-   git clone <repo-url> urumi && cd urumi
+   git clone https://github.com/Mohin-Gupta/Urumi_Submission.git urumi && cd urumi
    ```
 
 2. Create the cluster. The config maps ports 80 and 443 to your computer.
@@ -229,7 +229,7 @@ Example prompts:
 | Disable a server | **Servers →** click the server row **→ Disable** | Its tools go out of the tool list. Connected clients get a `tools/list_changed` notification. |
 | Remove a person | **Team → Remove** | All the keys of that person stop working. |
 | Make a tool admin-only | **Servers →** click the server row **→ Admins only** switch | Members do not see the tool, and a direct call gets an error. |
-| See usage | **Metrics** | Calls, errors, and p50 and p95 latency for each server and tool, for the last 24 hours. |
+| See usage (admins) | **Metrics** | Calls, errors, and p50 and p95 latency for each server and tool, for the last 24 hours. |
 
 By default, `woo__create_product` and `woo__update_order_status` are admin-only.
 Members can still read products and orders.
@@ -254,6 +254,8 @@ The same chart is used. Only `values-prod.yaml` changes.
 > We checked `values-prod.yaml` with `helm lint` and `helm template`.
 
 ### Prepare the VPS
+
+Run the commands on the VPS as `root`.
 
 1. Get a VPS with at least 2 vCPUs and 4 GB of memory.
 2. Open ports 22, 80 and 443 in the firewall.
@@ -330,7 +332,9 @@ helm upgrade platform charts/platform -n urumi -f charts/platform/values-local.y
 ```
 
 With `--rollback-on-failure`, Helm rolls back by itself if the new pods do not become ready.
-During the upgrade, the old pods continue to serve requests.
+During the upgrade, the old gateway, dashboard and MCP server pods serve requests until the new pods are ready.
+WordPress is different. Its volume attaches to one pod only, so the old pod stops before the new pod starts.
+MCP sessions are in the memory of the gateway, so MCP clients start a new session after a gateway upgrade.
 
 To roll back by hand, find the last good revision and roll back to it:
 
@@ -381,7 +385,7 @@ apps/
   dashboard/     React dashboard
 charts/platform/ Helm chart with values-local.yaml and values-prod.yaml
 scripts/         Image build script
-docs/            Design note, threat model and logo
+docs/            Design note, threat model, architecture diagram and logo
 k3d.yaml         Local cluster config
 ```
 

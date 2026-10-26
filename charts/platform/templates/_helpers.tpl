@@ -69,6 +69,8 @@ spec:
         {{- include "platform.labels" .name | nindent 8 }}
         mcp-upstream: "true"
     spec:
+      # node as PID 1 ignores SIGTERM, and these servers hold no state worth waiting for
+      terminationGracePeriodSeconds: 5
       containers:
         - name: {{ .name }}
           image: {{ .root.Values.imageRegistry }}{{ .image }}
