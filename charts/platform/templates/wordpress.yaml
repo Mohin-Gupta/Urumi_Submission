@@ -27,7 +27,6 @@ metadata:
   labels: {{- include "platform.labels" "wordpress" | nindent 4 }}
 spec:
   replicas: 1
-  # The volume is ReadWriteOnce, so the old pod must stop before the new one starts
   strategy:
     type: Recreate
   selector:
@@ -42,8 +41,7 @@ spec:
           ports:
             - containerPort: 80
           env: {{- include "store.dbEnv" . | nindent 12 }}
-          # Readiness goes through PHP and the database; liveness only checks Apache,
-          # so a database outage doesn't restart WordPress
+          # liveness skips PHP and the DB, so a DB outage doesn't restart WordPress
           readinessProbe:
             httpGet: { path: /wp-login.php, port: 80 }
             periodSeconds: 10

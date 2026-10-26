@@ -18,7 +18,6 @@ export const config = {
   adminPassword: env("ADMIN_PASSWORD"),
   publicUrl: env("PUBLIC_URL"),
   seedServers,
-  // The platform's own in-cluster MCP services: the only private hosts an upstream may use
   internalHosts: new Set(seedServers.map((s) => new URL(s.url).hostname)),
   callTimeoutMs: Number(env("CALL_TIMEOUT_MS", "30000")),
   healthIntervalMs: Number(env("HEALTH_INTERVAL_MS", "10000")),

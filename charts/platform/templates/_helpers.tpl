@@ -15,13 +15,12 @@ app.kubernetes.io/part-of: platform
 {{ ternary "https" "http" .root.Values.ingress.tls }}://{{ include "platform.host" . }}
 {{- end }}
 
-{{/* Generated once, then read back from the cluster so upgrades keep the same value */}}
+{{/* generated once, then read back so upgrades keep the same value */}}
 {{- define "platform.secretValue" -}}
 {{- $data := (lookup "v1" "Secret" .root.Release.Namespace .name).data | default dict -}}
 {{- index $data .key | default (.value | b64enc) -}}
 {{- end }}
 
-{{/* WordPress and WP-CLI read the same wp-config.php, so they need the same DB env */}}
 {{- define "store.dbEnv" -}}
 - name: WORDPRESS_DB_HOST
   value: mariadb
@@ -34,7 +33,6 @@ app.kubernetes.io/part-of: platform
     secretKeyRef: { name: store-secrets, key: db-password }
 {{- end }}
 
-{{/* Hardened container defaults; pass the image's numeric non-root user id */}}
 {{- define "platform.securityContext" -}}
 runAsNonRoot: true
 runAsUser: {{ . }}
@@ -44,10 +42,6 @@ capabilities:
   drop: [ALL]
 {{- end }}
 
-{{/*
-An upstream MCP server: ClusterIP Service + Deployment, no Ingress.
-The mcp-upstream label is what the NetworkPolicy uses to let only the gateway in.
-*/}}
 {{- define "platform.mcpServer" -}}
 apiVersion: v1
 kind: Service
@@ -102,7 +96,6 @@ storageClassName: {{ . }}
 {{- end }}
 {{- end }}
 
-{{/* Ingress for one host; paths is a list of {path, service, port} */}}
 {{- define "platform.ingress" -}}
 {{- $host := include "platform.host" . -}}
 apiVersion: networking.k8s.io/v1

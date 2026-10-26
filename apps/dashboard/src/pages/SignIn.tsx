@@ -2,7 +2,6 @@ import { api } from "../api";
 import { Logo } from "../icons";
 import { ErrorText, useSubmit } from "../ui";
 
-// Handles both normal sign-in and accepting an invite (setting a first password)
 export function SignIn({ inviteToken, onSignedIn }: { inviteToken?: string; onSignedIn: () => void }) {
   const { onSubmit, error, busy } = useSubmit(async (f) => {
     if (inviteToken) await api("/invites/accept", { body: { token: inviteToken, password: f.password } });

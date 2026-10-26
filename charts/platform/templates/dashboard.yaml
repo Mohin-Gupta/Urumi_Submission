@@ -36,7 +36,6 @@ spec:
           resources: {{- toYaml .Values.dashboard.resources | nindent 12 }}
           securityContext: {{- include "platform.securityContext" 101 | nindent 12 }}
           volumeMounts:
-            # nginx writes its pid and cache here; the rest of the filesystem is read-only
             - name: tmp
               mountPath: /tmp
       volumes:

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
-# Builds our images at the tags pinned in values.yaml.
-# No argument: imports them into the local k3d cluster.
-# With a registry prefix (e.g. ghcr.io/you/): pushes them there for the VPS.
+# Builds our images. No argument: import into k3d. With a registry prefix: push there.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 REGISTRY="${1:-}"

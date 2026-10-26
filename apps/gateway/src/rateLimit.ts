@@ -1,7 +1,5 @@
-// Token buckets: short bursts are fine, the steady rate is capped.
 const buckets = new Map<string, { tokens: number; updatedAt: number }>();
 
-// Returns 0 when the action may go ahead, otherwise the seconds to wait
 export function takeToken(key: string, perMinute: number) {
   const now = Date.now();
   const bucket = buckets.get(key) ?? { tokens: perMinute, updatedAt: now };

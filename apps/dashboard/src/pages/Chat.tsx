@@ -6,7 +6,6 @@ type Entry = ChatTurn & { steps?: ToolStep[] };
 
 const SUGGESTIONS = [
   { text: "What orders came in today?" },
-  // Creating products is admin-only by default
   { text: "Create a product called Demo Mug priced at 299", adminOnly: true },
   { text: "Add a team note for each of today's orders saying the customer needs a follow-up call" },
 ];
@@ -29,7 +28,6 @@ function Steps({ steps }: { steps: ToolStep[] }) {
   );
 }
 
-// Keeps the conversation when the user switches pages; per user and per browser tab
 function useStoredEntries(userId: number) {
   const storageKey = `chat:${userId}`;
   const [entries, setEntries] = useState<Entry[]>(() => {
@@ -43,7 +41,7 @@ function useStoredEntries(userId: number) {
     try {
       sessionStorage.setItem(storageKey, JSON.stringify(entries));
     } catch {
-      // Storage full or blocked: the chat still works, it just won't survive navigation
+      // storage blocked: chat still works, it just forgets on page switch
     }
   }, [storageKey, entries]);
   return [entries, setEntries] as const;
@@ -82,7 +80,6 @@ export function Chat({ user }: { user: User }) {
     e.preventDefault();
     send(input);
   };
-  // Enter sends, Shift+Enter adds a new line
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();

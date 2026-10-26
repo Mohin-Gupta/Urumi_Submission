@@ -9,7 +9,6 @@
   podSelector:
     matchLabels: {{- toYaml .Values.ingress.controller.podLabels | nindent 6 }}
 {{- end }}
-# Nothing gets in unless a policy below allows it
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -73,7 +72,6 @@ spec:
       ports:
         - port: 8080
 ---
-# Upstream MCP servers only take traffic from the gateway
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -88,7 +86,6 @@ spec:
       ports:
         - port: 8080
 ---
-# Upstream MCP servers may only look up names. A compromised one can't reach the internet or other pods.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -109,7 +106,6 @@ spec:
         - { port: 53, protocol: UDP }
         - { port: 53, protocol: TCP }
 ---
-# The one extra path an upstream needs: woo-mcp to the store
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -124,7 +120,6 @@ spec:
       ports:
         - port: 80
 ---
-# Databases never start connections
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:

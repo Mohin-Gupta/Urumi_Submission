@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "./api";
 
-// A null path skips loading, for data only some users may see
 export function useData<T>(path: string | null, pollMs?: number) {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string>();
@@ -22,7 +21,6 @@ export function useData<T>(path: string | null, pollMs?: number) {
   return { data, error, reload };
 }
 
-// Wraps a form submit: collects the fields, tracks busy state and shows the error message
 export function useSubmit(action: (fields: Record<string, string>, form: HTMLFormElement) => Promise<void>) {
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
@@ -54,7 +52,7 @@ export function PageHeader({ title, children, actions }: { title: string; childr
   );
 }
 
-// The Clipboard API only exists on HTTPS and localhost; plain-HTTP setups need the older textarea route
+// the clipboard API needs HTTPS, so fall back on plain HTTP
 async function writeClipboard(text: string) {
   if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
   const area = document.createElement("textarea");
@@ -89,7 +87,6 @@ export function CodeLine({ text }: { text: string }) {
   );
 }
 
-// For values the server will only ever show once: new API keys and invite links
 export function Reveal({ title, value, note, children, onDone }: {
   title: string;
   value: string;

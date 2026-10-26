@@ -25,7 +25,6 @@ Keep answers short and mention order or product ids when you refer to them. Now 
 const toolText = (result: CallToolResult) =>
   result.content.map((c) => (c.type === "text" ? c.text : `[${c.type}]`)).join("\n").slice(0, MAX_TOOL_OUTPUT);
 
-// The tools this user may use, in the OpenAI function-calling format
 function functionTools(user: User) {
   return listTools(user.role).map((t) => {
     const { $schema, ...parameters } = t.inputSchema as Record<string, unknown>;
@@ -42,16 +41,14 @@ async function complete(user: User, messages: Message[]) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 429) throw new HttpError(429, "The language model's rate limit was reached. Wait a minute and try again.");
-  // Gemini wraps errors in an array, OpenAI-style APIs don't
+  // Gemini wraps errors in an array
   const error = (Array.isArray(data) ? data[0] : data)?.error?.message;
   if (!res.ok) throw new HttpError(502, `The language model returned an error: ${error ?? res.status}`);
-  // A safety block or an empty answer comes back with no message
   const message = data.choices?.[0]?.message;
   if (!message) throw new HttpError(502, "The language model returned no answer");
   return message as Extract<Message, { role: "assistant" }>;
 }
 
-// The tool loop: ask the model, run the tools it asks for as this user, repeat until it answers
 export async function runChat(user: User, history: ChatTurn[]) {
   if (!config.llm.apiKey) throw new HttpError(503, "Chat isn't set up yet: the llm-secrets Secret has no API key");
 
@@ -63,11 +60,11 @@ export async function runChat(user: User, history: ChatTurn[]) {
     try {
       reply = await complete(user, messages);
     } catch (err) {
-      // Tools may already have changed things, so show them rather than only the error
+      // tools may already have run, so show them with the error
       if (!steps.length) throw err;
       return { reply: `I couldn't finish: ${(err as Error).message}`, steps };
     }
-    // Send back only standard fields; some providers reject extras like "reasoning"
+    // some providers reject extra fields like "reasoning"
     messages.push({ role: "assistant", content: reply.content, tool_calls: reply.tool_calls });
     if (!reply.tool_calls?.length) return { reply: reply.content || "The model gave no answer.", steps };
 
@@ -76,7 +73,7 @@ export async function runChat(user: User, history: ChatTurn[]) {
       try {
         args = JSON.parse(call.function.arguments || "{}");
       } catch {
-        // Bad JSON from the model: call with no arguments and let the tool report what's missing
+        // bad JSON from the model: let the tool complain
       }
       const result = await callTool(user, call.function.name, args, "chat");
       const output = toolText(result);

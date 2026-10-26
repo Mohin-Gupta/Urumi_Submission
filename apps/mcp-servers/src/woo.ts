@@ -19,8 +19,7 @@ async function woo(path: string, { method = "GET", query = {}, body }: { method?
     headers: {
       Authorization: AUTH,
       "Content-Type": "application/json",
-      // WooCommerce refuses key auth over plain HTTP. This hop never leaves the cluster,
-      // so we tell WordPress to treat it as HTTPS.
+      // Woo only takes key auth over HTTPS, and this hop never leaves the cluster
       "X-Forwarded-Proto": "https",
     },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -31,7 +30,6 @@ async function woo(path: string, { method = "GET", query = {}, body }: { method?
   try {
     data = JSON.parse(text);
   } catch {
-    // WordPress shows an HTML page when PHP or the database fails
     throw new Error(`WooCommerce returned ${res.status} with a non-JSON response; the store may be down`);
   }
   if (!res.ok) throw new Error(`WooCommerce returned ${res.status}: ${data.message ?? res.statusText}`);
@@ -44,7 +42,7 @@ const product = (p: any) => ({
   price: p.price,
   status: p.status,
   stock_status: p.stock_status,
-  // WordPress builds permalinks for the internal HTTPS-faked request, so link via the public URL instead
+  // permalinks come back as https, so build the public link ourselves
   url: `${STORE_URL}/?p=${p.id}`,
 });
 
@@ -113,7 +111,6 @@ function createServer() {
         query: {
           status,
           per_page: limit,
-          // The whole day, up to midnight, in store time
           after: day && `${day}T00:00:00`,
           before: day && `${nextDay(day)}T00:00:00`,
         },

@@ -14,7 +14,6 @@ function authBody(f: Record<string, string>) {
   return { type: "none" };
 }
 
-// Used for both adding and editing. Stored credentials are never sent back, so editing offers "keep".
 function ServerForm({ server, onSaved, onCancel }: { server?: Server; onSaved: () => void; onCancel: () => void }) {
   const [authType, setAuthType] = useState(server ? "keep" : "none");
   const { onSubmit, error, busy } = useSubmit(async (f) => {

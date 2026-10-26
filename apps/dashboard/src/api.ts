@@ -54,7 +54,6 @@ export async function api<T = void>(path: string, options: { method?: string; bo
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  // An expired session anywhere sends the app back to the login screen
   if (res.status === 401 && path !== "/login") window.dispatchEvent(new Event("signed-out"));
   if (!res.ok) throw new Error((await res.json().catch(() => null))?.error ?? `Request failed (${res.status})`);
   return res.status === 204 ? (undefined as T) : res.json();

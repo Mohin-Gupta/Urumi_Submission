@@ -31,9 +31,8 @@ type Upstream = {
   checkedAt: Date;
 };
 
-// Tool names exposed to clients are "<server slug>__<tool name>"
 export const SEPARATOR = "__";
-// What the Claude API and most MCP clients accept. One bad name would make them reject the whole list.
+// what Claude and most clients accept; one bad name breaks the whole list
 const VALID_TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 const MAX_DESCRIPTION = 1000;
 
@@ -47,7 +46,7 @@ async function connect(server: ServerRow) {
   const headers: Record<string, string> = {};
   if (server.header_name && server.header_value_enc) headers[server.header_name] = decrypt(server.header_value_enc);
   const client = new Client({ name: "urumi-gateway", version: "0.1.0" });
-  // redirect: "error" stops an upstream from bouncing our credentialed request somewhere else
+  // never follow a redirect with our credentials attached
   const transport = new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers, redirect: "error" } });
   try {
     await client.connect(transport, { timeout: config.connectTimeoutMs });
@@ -78,7 +77,6 @@ function connected(server: ServerRow, client: Client, tools: Tool[], checkedAt: 
   return { server, client, status: "connected", tools: usable, warning, checkedAt };
 }
 
-// Never throws: a failing server only marks itself unreachable
 async function check(server: ServerRow): Promise<Upstream> {
   const previous = upstreams.get(server.id);
   const checkedAt = new Date();
@@ -86,7 +84,6 @@ async function check(server: ServerRow): Promise<Upstream> {
     await closeQuietly(previous?.client);
     return { server, status: "disabled", tools: [], checkedAt };
   }
-  // Reuse the live connection. If it broke (say the upstream restarted), reconnect right away.
   if (previous?.client) {
     try {
       return connected(server, previous.client, await fetchTools(previous.client), checkedAt);
@@ -100,12 +97,10 @@ async function check(server: ServerRow): Promise<Upstream> {
     return connected(server, client, await fetchTools(client), checkedAt);
   } catch (err) {
     await closeQuietly(client);
-    // Upstreams control this text (it can be a whole HTML page), so keep it short
     return { server, status: "unreachable", tools: [], error: errorMessage(err).slice(0, 300), checkedAt };
   }
 }
 
-// Members' lists are a subset of the admin list, so comparing names plus the admin-only flag catches every change
 const toolSignature = () =>
   listTools("admin")
     .map((t) => `${t.name}:${listTools("member").some((m) => m.name === t.name)}`)
@@ -124,20 +119,17 @@ async function refreshAll() {
   if (toolSignature() !== before) events.emit("toolsChanged");
 }
 
-// Runs one at a time, so health checks and admin edits never race each other
 let queue = Promise.resolve();
 export function refresh() {
   queue = queue.then(refreshAll).catch((err) => console.error("refresh failed:", err));
   return queue;
 }
 
-// Each check is scheduled after the previous one ends, so slow upstreams can't pile checks up
 export function startHealthChecks() {
   const loop = () => refresh().then(() => setTimeout(loop, config.healthIntervalMs));
   return loop();
 }
 
-// Drop the live connection so the next refresh reconnects with the new settings
 export async function reload(serverId: number) {
   const upstream = upstreams.get(serverId);
   await closeQuietly(upstream?.client);
@@ -148,7 +140,6 @@ export async function reload(serverId: number) {
 export const canUse = (server: ServerRow, tool: string, role: Role) =>
   role === "admin" || !server.admin_only_tools.includes(tool);
 
-// Tools a role may use. Admin-only tools are hidden from members, not just blocked.
 export function listTools(role: Role): Tool[] {
   return [...upstreams.values()]
     .filter((u) => u.status === "connected")
@@ -156,7 +147,7 @@ export function listTools(role: Role): Tool[] {
       u.tools.filter((tool) => canUse(u.server, tool.name, role)).map((tool) => ({
         ...tool,
         name: `${u.server.slug}${SEPARATOR}${tool.name}`,
-        // Descriptions come from servers we don't control: label the source and cap the length
+        // untrusted text: label where it came from and cap it
         description: `[${u.server.name}] ${(tool.description ?? "").slice(0, MAX_DESCRIPTION)}`,
       })),
     );
@@ -166,7 +157,6 @@ export function findUpstream(slug: string) {
   return [...upstreams.values()].find((u) => u.server.slug === slug);
 }
 
-// What the dashboard sees. Credentials never leave this module.
 export function serverStatus(role: Role) {
   return [...upstreams.values()].map(({ server, status, tools, error, warning, checkedAt }) => ({
     id: server.id,

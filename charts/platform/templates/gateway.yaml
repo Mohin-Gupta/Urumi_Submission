@@ -92,7 +92,7 @@ metadata:
   name: gateway
   labels: {{- include "platform.labels" "gateway" | nindent 4 }}
 spec:
-  # MCP sessions live in memory, so keep one replica until sessions are shared
+  # MCP sessions are in memory, so one replica for now
   replicas: 1
   selector:
     matchLabels: {{- include "platform.selector" "gateway" | nindent 6 }}
@@ -131,7 +131,6 @@ spec:
               value: {{ .Values.llm.baseUrl }}
             - name: LLM_MODEL
               value: {{ .Values.llm.model }}
-            # Optional so the gateway still runs before an LLM key is added; chat says it isn't set up
             - name: LLM_API_KEY
               valueFrom:
                 secretKeyRef: { name: llm-secrets, key: api-key, optional: true }

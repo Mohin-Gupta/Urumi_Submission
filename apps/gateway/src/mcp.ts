@@ -33,12 +33,11 @@ async function audit(user: User, name: string, ms: number, error: string | null,
   );
 }
 
-// Every tool call, from MCP clients and the chat agent, goes through here
 export async function callTool(user: User, name: string, args: Record<string, unknown>, source: "mcp" | "chat") {
   const started = Date.now();
   const { slug, tool } = splitToolName(name);
   const upstream = slug ? findUpstream(slug) : undefined;
-  // Per user rather than per key, so making more keys doesn't raise the limit
+  // per user, so extra keys don't buy extra calls
   const waitSeconds = takeToken(`tools:${user.id}`, config.rateLimitPerMinute);
   let result: CallToolResult;
 
@@ -60,8 +59,7 @@ export async function callTool(user: User, name: string, args: Record<string, un
       result = errorResult(
         timedOut ? `Server "${slug}" timed out after ${config.callTimeoutMs / 1000}s` : `Server "${slug}" failed: ${errorMessage(err)}`,
       );
-      // Re-check now so a restarted upstream recovers on the next call. We never retry here:
-      // the failed call may have been a write that already happened.
+      // no retry: the call might have been a write that already went through
       if (!timedOut) refresh();
     }
   }
@@ -71,7 +69,7 @@ export async function callTool(user: User, name: string, args: Record<string, un
   return result;
 }
 
-// Returns the key's owner even when revoked, so rejected calls can still be audited
+// returns the owner of a revoked key too, so we can audit the attempt
 async function authenticate(header?: string): Promise<{ user?: User; error?: string }> {
   const key = header?.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!key) return { error: "Missing API key. Send it as: Authorization: Bearer <key>" };
@@ -103,12 +101,10 @@ type Session = { transport: StreamableHTTPServerTransport; server: Server; userI
 const sessions = new Map<string, Session>();
 const SESSION_IDLE_MS = 30 * 60 * 1000;
 
-// Tell connected clients to re-fetch tools when a server is added, disabled or goes down
 events.on("toolsChanged", () => {
   for (const { server } of sessions.values()) server.sendToolListChanged().catch(() => {});
 });
 
-// Clients often vanish without ending their session. A closed session makes them re-initialize.
 setInterval(() => {
   for (const session of sessions.values()) {
     if (Date.now() - session.lastSeen > SESSION_IDLE_MS) session.transport.close();
@@ -122,7 +118,6 @@ const rpcError = (message: string) => ({ jsonrpc: "2.0", error: { code: -32000, 
 export const mcp = Router();
 
 mcp.all("/mcp", async (req, res) => {
-  // Checked on every request, so revoking a key cuts off open sessions immediately
   const { user, error } = await authenticate(req.headers.authorization);
   if (error || !user) {
     if (user && req.body?.method === "tools/call") await audit(user, String(req.body.params?.name ?? "unknown"), 0, error!, "mcp");

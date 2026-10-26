@@ -53,7 +53,6 @@ export function App() {
   const isAdmin = user.role === "admin";
   const pages = PAGES.filter((p) => !("adminOnly" in p) || isAdmin);
   const current = pages.find((p) => p.path === path) ?? pages[0];
-  // A page this user can't open falls back to the first one; keep the address bar honest
   if (current.path !== path) window.history.replaceState(null, "", current.path);
   const link = (p: (typeof pages)[number]) => (
     <a
@@ -93,7 +92,6 @@ export function App() {
           </button>
         </div>
       </aside>
-      {/* Keyed by page so the entrance animation replays on every navigation */}
       <main className="content" key={current.path}>
         <current.page user={user} />
       </main>

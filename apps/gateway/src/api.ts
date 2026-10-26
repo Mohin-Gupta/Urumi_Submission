@@ -53,7 +53,6 @@ function requireAdmin(req: Request, _res: Response, next: NextFunction) {
   next();
 }
 
-// Admins see everyone's records, members only their own
 const ownerFilter = (req: Request) => (req.user.role === "admin" ? null : req.user.id);
 const idParam = (req: Request) => parse(z.coerce.number().int(), req.params.id);
 
@@ -63,7 +62,6 @@ const LOGIN_ATTEMPTS_PER_MINUTE = 10;
 
 api.post("/login", async (req, res) => {
   const { email, password } = parse(z.object({ email: z.string(), password: z.string() }), req.body);
-  // Slows password guessing against one account
   const waitSeconds = takeToken(`login:${email.toLowerCase()}`, LOGIN_ATTEMPTS_PER_MINUTE);
   if (waitSeconds) throw new HttpError(429, `Too many sign-in attempts. Try again in ${waitSeconds}s.`);
   const { rows } = await db.query("select id, password_hash from users where email = $1", [email.toLowerCase()]);
@@ -96,8 +94,6 @@ api.get("/me", (req, res) => {
   res.json(req.user);
 });
 
-// Team
-
 api.get("/users", requireAdmin, async (_req, res) => {
   const { rows } = await db.query(
     "select id, email, name, role, password_hash is null as invited, created_at from users order by id",
@@ -127,8 +123,6 @@ api.delete("/users/:id", requireAdmin, async (req, res) => {
   res.status(204).end();
 });
 
-// API keys
-
 api.get("/keys", async (req, res) => {
   const { rows } = await db.query(
     `select k.id, k.name, k.prefix, k.created_at, k.last_used_at, k.revoked_at, u.email as user_email
@@ -149,7 +143,6 @@ api.post("/keys", async (req, res) => {
     "insert into api_keys (user_id, name, prefix, key_hash) values ($1, $2, $3, $4) returning id, name, prefix, created_at",
     [body.userId ?? req.user.id, body.name, key.slice(0, 12), sha256(key)],
   );
-  // The only time the full key is ever shown
   res.status(201).json({ ...rows[0], key });
 });
 
@@ -161,8 +154,6 @@ api.delete("/keys/:id", async (req, res) => {
   if (!rowCount) throw new HttpError(404, "Key not found");
   res.status(204).end();
 });
-
-// Upstream MCP servers
 
 const serverFields = z.object({
   slug: z.string().regex(/^[a-z0-9-]{1,20}$/, "Use 1-20 lowercase letters, digits or dashes"),
@@ -178,7 +169,6 @@ const serverFields = z.object({
       value: z.string().min(1),
     }),
   ]),
-  // Upstream tool names (without the prefix) that only admins may see and call
   adminOnlyTools: z.array(z.string().max(128)).max(500),
 });
 
@@ -216,7 +206,7 @@ api.patch("/servers/:id", requireAdmin, async (req, res) => {
   const id = idParam(req);
   const { auth, ...fields } = parse(serverFields.omit({ adminOnlyTools: true }).partial(), req.body);
   await rejectPrivateUrl(fields.url);
-  // Leaving auth out keeps the stored credential, since the dashboard never sees it
+  // no auth in the body = keep the stored credential
   const changes = Object.entries({ ...fields, ...(auth && credentialColumns(auth)) });
   if (changes.length) {
     const { rowCount } = await db.query(
@@ -229,7 +219,7 @@ api.patch("/servers/:id", requireAdmin, async (req, res) => {
   res.json(serverStatus("admin").find((u) => u.id === id));
 });
 
-// One tool at a time, changed inside the database, so two quick toggles can't overwrite each other
+// toggled in SQL so two quick clicks can't undo each other
 api.put("/servers/:id/tools/:tool", requireAdmin, async (req, res) => {
   const id = idParam(req);
   const { adminOnly } = parse(z.object({ adminOnly: z.boolean() }), req.body);
@@ -252,8 +242,6 @@ api.delete("/servers/:id", requireAdmin, async (req, res) => {
   res.status(204).end();
 });
 
-// Chat agent: runs as the signed-in user, so its tool calls are audited under them
-
 api.post("/chat", async (req, res) => {
   const { messages } = parse(
     z.object({
@@ -264,8 +252,6 @@ api.post("/chat", async (req, res) => {
   res.json(await runChat(req.user, messages));
 });
 
-// Audit log
-
 api.get("/audit", async (req, res) => {
   const { rows } = await db.query(
     `select id, at, user_email, server_slug, tool, duration_ms, ok, error, source from audit_log
@@ -274,8 +260,6 @@ api.get("/audit", async (req, res) => {
   );
   res.json(rows);
 });
-
-// Metrics: call volume, errors and latency over the last 24 hours, from the audit log
 
 const statsBy = async (groupBy: "server_slug" | "server_slug, tool") =>
   (

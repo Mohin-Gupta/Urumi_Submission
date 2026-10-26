@@ -12,7 +12,6 @@ export function requireEnv(name: string) {
   return value;
 }
 
-// Stateless Streamable HTTP: a fresh server per request, so no session state to lose on restart
 export function serve(createServer: () => McpServer) {
   const app = express();
   app.use(express.json());

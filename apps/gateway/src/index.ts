@@ -20,7 +20,6 @@ app.use("/api", api);
 app.use(mcp);
 app.use(errorHandler);
 
-// Postgres may still be starting when the gateway boots
 for (let attempt = 1; ; attempt++) {
   try {
     await migrate();
@@ -35,7 +34,6 @@ for (let attempt = 1; ; attempt++) {
 await startHealthChecks();
 const server = app.listen(8080, () => console.log("Gateway listening on :8080"));
 
-// On rollout, finish in-flight requests before exiting. Open MCP streams are closed so clients reconnect.
 process.on("SIGTERM", () => {
   console.log("Shutting down...");
   server.close(() => db.end().finally(() => process.exit(0)));

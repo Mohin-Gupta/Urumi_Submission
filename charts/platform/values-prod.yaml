@@ -1,9 +1,8 @@
-# A k3s VPS. Everything not listed here is the same as local.
+# k3s VPS. Anything not here is the same as local.
 
-# <vps-ip>.nip.io works without buying a domain; a real domain needs A records for store. and app.
+# <vps-ip>.nip.io works without buying a domain
 domain: CHANGE_ME.nip.io
 
-# Images are pushed here by scripts/build-images.sh
 imageRegistry: ghcr.io/CHANGE_ME/
 
 ingress:
@@ -14,7 +13,7 @@ ingress:
 certManager:
   issuerEmail: CHANGE_ME@example.com
 
-# k3s ships local-path; swap for your provider's class (e.g. hcloud-volumes) to survive node loss
+# use your provider's class to survive losing the node
 storageClass: local-path
 
 mariadb:

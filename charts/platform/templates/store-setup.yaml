@@ -22,14 +22,14 @@ spec:
       labels: {{- include "platform.labels" "store-setup" | nindent 8 }}
     spec:
       restartPolicy: OnFailure
-      # Shares WordPress's ReadWriteOnce volume, so it must land on the same node
+      # shares WordPress's RWO volume, so it has to run on the same node
       affinity:
         podAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             - labelSelector:
                 matchLabels: {{- include "platform.selector" "wordpress" | nindent 18 }}
               topologyKey: kubernetes.io/hostname
-      # Match the Apache image's www-data user so files stay writable by WordPress
+      # www-data in the Apache image, so WordPress can still write the files
       securityContext:
         runAsUser: 33
         runAsGroup: 33

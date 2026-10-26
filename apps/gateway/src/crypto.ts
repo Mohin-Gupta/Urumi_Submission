@@ -4,8 +4,7 @@ import { config } from "./config.js";
 
 const scryptAsync = promisify(scrypt) as (password: string, salt: Buffer, length: number) => Promise<Buffer>;
 
-// API keys and session tokens are 256 random bits, so a fast hash is enough to store them.
-// Passwords are human-chosen, so they get scrypt.
+// keys are random enough for sha256; passwords aren't, so they get scrypt
 export const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 export const randomToken = (prefix = "") => prefix + randomBytes(32).toString("base64url");
 
@@ -21,7 +20,6 @@ export async function verifyPassword(password: string, stored: string) {
   return timingSafeEqual(actual, Buffer.from(hash, "hex"));
 }
 
-// Upstream credentials are encrypted at rest with AES-256-GCM
 const KEY = createHash("sha256").update(config.encryptionKey).digest();
 
 export function encrypt(plain: string) {

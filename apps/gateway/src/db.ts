@@ -62,7 +62,6 @@ async function count(table: string) {
   return rows[0].n as number;
 }
 
-// Creates tables, then seeds the first admin and the default servers on first boot only
 export async function migrate() {
   await db.query(SCHEMA);
   if ((await count("users")) === 0) {

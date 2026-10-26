@@ -1,5 +1,4 @@
 #!/bin/sh
-# Idempotent: runs on every install and upgrade.
 set -eu
 cd /var/www/html
 
@@ -10,17 +9,15 @@ wp core is-installed || wp core install --skip-email \
   --url="$STORE_URL" --title="$STORE_TITLE" \
   --admin_user="$ADMIN_USER" --admin_password="$ADMIN_PASSWORD" --admin_email="$ADMIN_EMAIL"
 
-# The image only seeds core files on an empty volume, so upgrades happen here
+# the image only copies core files onto an empty volume, so upgrades happen here
 wp core update --version="$WP_VERSION"
 wp core update-db
 
-# Re-applied every run, so moving to a new domain is only a values change
 wp option update home "$STORE_URL"
 wp option update siteurl "$STORE_URL"
 wp option update timezone_string "$TIMEZONE"
 wp rewrite structure '/%postname%/'
 
-# Pinned versions: install or move to the version in values, then run any database updates
 [ "$(wp plugin get woocommerce --field=version 2>/dev/null)" = "$WC_VERSION" ] ||
   wp plugin install woocommerce --version="$WC_VERSION" --force
 wp plugin activate woocommerce
@@ -30,13 +27,13 @@ wp wc update
 wp theme activate storefront
 
 wp option update woocommerce_currency "$CURRENCY"
-# New stores start in "coming soon" mode, which hides the shop from customers
+# new stores start in "coming soon" mode, which hides the shop
 wp option update woocommerce_coming_soon no
 wp option update woocommerce_onboarding_profile '{"skipped":true}' --format=json
 wp option update woocommerce_cod_settings '{"enabled":"yes","title":"Cash on delivery"}' --format=json
 wp wc tool run install_pages --user="$ADMIN_USER"
 
-# WooCommerce stores API keys hashed, so we insert the key from our Secret directly
+# Woo stores keys hashed, so we insert ours directly
 wp eval '
 global $wpdb;
 $table = $wpdb->prefix . "woocommerce_api_keys";

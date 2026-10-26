@@ -8,7 +8,6 @@ const paths = {
   chevron: <path d="M4 6l4 4 4-4" />,
 };
 
-// The Urumi mark: a U that is also a socket every connection plugs into
 export function Logo() {
   return (
     <svg className="logo" viewBox="0 0 256 256" aria-hidden>

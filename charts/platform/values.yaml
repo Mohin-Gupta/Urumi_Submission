@@ -1,29 +1,26 @@
-# Public hosts are store.<domain> and app.<domain>
+# Hosts are store.<domain> and app.<domain>
 domain: 127.0.0.1.nip.io
 
 ingress:
   className: traefik
   tls: false
   annotations: {}
-  # Where the ingress controller runs, so NetworkPolicies can let it in
   controller:
     namespace: kube-system
     podLabels:
       app.kubernetes.io/name: traefik
 
-# Where cluster DNS runs, so egress NetworkPolicies can allow name lookups
 dns:
   namespace: kube-system
   podLabels:
     k8s-app: kube-dns
 
-# Empty means the cluster's default StorageClass
 storageClass: ""
 
-# Prefix for our own images, with a trailing slash (e.g. ghcr.io/you/). Empty = images imported into the cluster.
+# Our image prefix with a trailing slash, e.g. ghcr.io/you/
 imageRegistry: ""
 
-# When set, the chart creates a Let's Encrypt ClusterIssuer named "letsencrypt" (needs cert-manager installed)
+# Set this to get a Let's Encrypt ClusterIssuer (needs cert-manager)
 certManager:
   issuerEmail: ""
 
@@ -41,14 +38,12 @@ dashboard:
 gateway:
   adminEmail: admin@example.com
   callTimeoutMs: 30000
-  # Tool calls per user per minute, across all their keys and the chat
   rateLimitPerMinute: 60
-  # Registered on first boot only; after that admins manage servers in the dashboard
+  # Only used on first boot
   seedServers:
     - slug: woo
       name: WooCommerce
       url: "http://woo-mcp/mcp"
-      # Members can read the store; only admins can change it
       adminOnlyTools: [create_product, update_order_status]
     - { slug: notes, name: Team Notes, url: "http://notes-mcp/mcp" }
     - { slug: everything, name: MCP Everything, url: "http://everything-mcp/mcp" }
@@ -56,7 +51,7 @@ gateway:
     requests: { cpu: 100m, memory: 128Mi }
     limits: { cpu: "1", memory: 512Mi }
 
-# Any OpenAI-compatible chat API. The key is never in values; create it with:
+# Any OpenAI-compatible API. The key goes in a Secret, not here:
 #   kubectl -n urumi create secret generic llm-secrets --from-literal=api-key=<key>
 llm:
   baseUrl: https://generativelanguage.googleapis.com/v1beta/openai
@@ -81,7 +76,6 @@ mariadb:
     limits: { cpu: "1", memory: 512Mi }
 
 store:
-  # Core files live on the volume, so the setup Job updates them to this version
   wordpressVersion: "7.0"
   woocommerceVersion: "11.2.1"
   storefrontVersion: "4.6.2"

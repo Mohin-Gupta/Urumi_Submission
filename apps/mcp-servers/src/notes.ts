@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { jsonResult, serve } from "./serve.js";
 
-// In memory on purpose: this is a small second upstream for the demo, not a datastore
+// in memory on purpose, it's just a demo server
 const notes: { id: number; subject: string; text: string; created: string }[] = [];
 
 function createServer() {
