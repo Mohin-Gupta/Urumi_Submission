@@ -479,7 +479,8 @@ tr:last-child td {
   border-bottom: none;
 }
 
-.nowrap {
+.nowrap,
+td code {
   white-space: nowrap;
 }
 
