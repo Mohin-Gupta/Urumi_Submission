@@ -1,6 +1,6 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { api, type User } from "./api";
-import { Icon } from "./icons";
+import { Icon, Logo } from "./icons";
 import { Audit } from "./pages/Audit";
 import { Chat } from "./pages/Chat";
 import { Keys } from "./pages/Keys";
@@ -72,7 +72,7 @@ export function App() {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" />
+          <Logo />
           Urumi
         </div>
         <nav className="nav-group">{pages.filter((p) => !("adminOnly" in p)).map(link)}</nav>

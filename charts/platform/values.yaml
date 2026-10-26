@@ -31,7 +31,7 @@ images:
   mcpServers: urumi/mcp-servers:0.1.4
   everything: urumi/everything-mcp:2.0.1
   gateway: urumi/gateway:0.6.0
-  dashboard: urumi/dashboard:0.4.5
+  dashboard: urumi/dashboard:0.5.1
 
 dashboard:
   resources:

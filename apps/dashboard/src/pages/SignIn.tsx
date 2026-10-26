@@ -1,4 +1,5 @@
 import { api } from "../api";
+import { Logo } from "../icons";
 import { ErrorText, useSubmit } from "../ui";
 
 // Handles both normal sign-in and accepting an invite (setting a first password)
@@ -13,7 +14,7 @@ export function SignIn({ inviteToken, onSignedIn }: { inviteToken?: string; onSi
     <main className="signin">
       <form className="panel" onSubmit={onSubmit}>
         <div className="brand">
-          <span className="brand-mark" />
+          <Logo />
           Urumi
         </div>
         <h1>{inviteToken ? "Join your team" : "Sign in"}</h1>

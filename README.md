@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.svg" width="88" alt="Urumi logo"></p>
+
 # Urumi MCP Gateway
 
 A WooCommerce store and a team MCP gateway that run on Kubernetes.

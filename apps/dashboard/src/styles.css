@@ -107,11 +107,10 @@ code {
   font-weight: 600;
 }
 
-.brand-mark {
+.logo {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #ffffff, #6b6b6b);
+  flex: none;
 }
 
 .nav-group {
@@ -915,7 +914,13 @@ tr.dim td {
 
 .signin .brand {
   padding: 0;
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.signin .logo {
+  width: 36px;
+  height: 36px;
 }
 
 .section-title {
