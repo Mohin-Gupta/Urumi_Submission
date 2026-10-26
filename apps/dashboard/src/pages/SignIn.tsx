@@ -12,7 +12,11 @@ export function SignIn({ inviteToken, onSignedIn }: { inviteToken?: string; onSi
   return (
     <main className="signin">
       <form className="panel" onSubmit={onSubmit}>
-        <h1>Urumi Gateway</h1>
+        <div className="brand">
+          <span className="brand-mark" />
+          Urumi
+        </div>
+        <h1>{inviteToken ? "Join your team" : "Sign in"}</h1>
         <p className="muted">
           {inviteToken ? "You've been invited. Choose a password to join your team." : "Sign in to your team's MCP gateway."}
         </p>

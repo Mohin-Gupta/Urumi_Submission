@@ -1,5 +1,6 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import { api, type User } from "./api";
+import { Icon } from "./icons";
 import { Audit } from "./pages/Audit";
 import { Chat } from "./pages/Chat";
 import { Keys } from "./pages/Keys";
@@ -9,13 +10,13 @@ import { SignIn } from "./pages/SignIn";
 import { Team } from "./pages/Team";
 
 const PAGES = [
-  { path: "/", label: "Servers", page: Servers },
-  { path: "/chat", label: "Chat", page: Chat },
-  { path: "/keys", label: "API keys", page: Keys },
-  { path: "/team", label: "Team", page: Team, adminOnly: true },
-  { path: "/audit", label: "Audit log", page: Audit },
-  { path: "/metrics", label: "Metrics", page: Metrics, adminOnly: true },
-];
+  { path: "/", label: "Servers", icon: "servers", page: Servers },
+  { path: "/chat", label: "Chat", icon: "chat", page: Chat },
+  { path: "/keys", label: "API keys", icon: "keys", page: Keys },
+  { path: "/team", label: "Team", icon: "team", page: Team, adminOnly: true },
+  { path: "/audit", label: "Audit log", icon: "audit", page: Audit },
+  { path: "/metrics", label: "Metrics", icon: "metrics", page: Metrics, adminOnly: true },
+] as const;
 
 function usePath() {
   const [path, setPath] = useState(window.location.pathname);
@@ -49,36 +50,51 @@ export function App() {
     return <SignIn inviteToken={inviteToken} onSignedIn={() => (navigate("/"), loadUser())} />;
   }
 
-  const pages = PAGES.filter((p) => !p.adminOnly || user.role === "admin");
+  const isAdmin = user.role === "admin";
+  const pages = PAGES.filter((p) => !("adminOnly" in p) || isAdmin);
   const current = pages.find((p) => p.path === path) ?? pages[0];
   // A page this user can't open falls back to the first one; keep the address bar honest
   if (current.path !== path) window.history.replaceState(null, "", current.path);
-  const link = (to: string) => (e: MouseEvent) => {
-    e.preventDefault();
-    navigate(to);
-  };
+  const link = (p: (typeof pages)[number]) => (
+    <a
+      key={p.path}
+      href={p.path}
+      onClick={(e: MouseEvent) => (e.preventDefault(), navigate(p.path))}
+      aria-current={p === current ? "page" : undefined}
+    >
+      <Icon name={p.icon} />
+      {p.label}
+    </a>
+  );
   const signOut = () => api("/logout", { method: "POST" }).finally(() => setUser(null));
 
   return (
     <div className="shell">
       <aside className="sidebar">
-        <div className="brand">Urumi Gateway</div>
-        <nav>
-          {pages.map((p) => (
-            <a key={p.path} href={p.path} onClick={link(p.path)} aria-current={p === current ? "page" : undefined}>
-              {p.label}
-            </a>
-          ))}
-        </nav>
+        <div className="brand">
+          <span className="brand-mark" />
+          Urumi
+        </div>
+        <nav className="nav-group">{pages.filter((p) => !("adminOnly" in p)).map(link)}</nav>
+        {isAdmin && (
+          <nav className="nav-group">
+            <span className="nav-label">Admin</span>
+            {pages.filter((p) => "adminOnly" in p).map(link)}
+          </nav>
+        )}
         <div className="me">
-          <span>{user.name}</span>
-          <span className="muted">{user.role === "admin" ? "Admin" : "Member"}</span>
+          <span className="avatar">{user.name[0]?.toUpperCase()}</span>
+          <div className="me-text">
+            {user.name}
+            <small>{user.email}</small>
+          </div>
           <button className="ghost small" onClick={signOut}>
             Sign out
           </button>
         </div>
       </aside>
-      <main className="content">
+      {/* Keyed by page so the entrance animation replays on every navigation */}
+      <main className="content" key={current.path}>
         <current.page user={user} />
       </main>
     </div>

@@ -1,23 +1,24 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "./api";
 
-export function useData<T>(path: string, pollMs?: number) {
+// A null path skips loading, for data only some users may see
+export function useData<T>(path: string | null, pollMs?: number) {
   const [data, setData] = useState<T>();
   const [error, setError] = useState<string>();
-  const reload = useCallback(
-    () =>
-      api<T>(path).then(
-        (d) => (setData(d), setError(undefined)),
-        (e: Error) => setError(e.message),
-      ),
-    [path],
-  );
+  const reload = useCallback(async () => {
+    if (!path) return;
+    await api<T>(path).then(
+      (d) => (setData(d), setError(undefined)),
+      (e: Error) => setError(e.message),
+    );
+  }, [path]);
   useEffect(() => {
+    if (!path) return;
     reload();
     if (!pollMs) return;
     const timer = setInterval(reload, pollMs);
     return () => clearInterval(timer);
-  }, [reload, pollMs]);
+  }, [path, reload, pollMs]);
   return { data, error, reload };
 }
 
@@ -41,11 +42,14 @@ export function useSubmit(action: (fields: Record<string, string>, form: HTMLFor
   return { onSubmit, error, busy };
 }
 
-export function PageHeader({ title, children }: { title: string; children?: ReactNode }) {
+export function PageHeader({ title, children, actions }: { title: string; children?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="page-header">
-      <h1>{title}</h1>
-      {children && <p>{children}</p>}
+      <div>
+        <h1>{title}</h1>
+        {children && <p>{children}</p>}
+      </div>
+      {actions && <div className="page-actions">{actions}</div>}
     </header>
   );
 }
