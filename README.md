@@ -6,18 +6,7 @@ A WooCommerce store and a team MCP gateway that run on Kubernetes.
 An admin connects MCP servers one time.
 Each team member then uses all the tools through one URL and one personal API key.
 
-```
-                       ┌──────────────── Kubernetes namespace "urumi" ────────────────┐
- Browser ── Ingress ───┼─▶ dashboard (React)                                          │
-                       │                                                              │
- Claude Code ─ Ingress ┼─▶ gateway ──┬─▶ woo-mcp ───────▶ wordpress ──▶ mariadb       │
- Cursor, Inspector     │   │         ├─▶ notes-mcp                                    │
-                       │   │         └─▶ everything-mcp                               │
-                       │   ├─▶ postgres (users, keys, servers, audit log)             │
-                       │   └─▶ LLM API (chat agent)                                   │
- Shopper ── Ingress ───┼─▶ wordpress (storefront)                                     │
-                       └──────────────────────────────────────────────────────────────┘
-```
+<p align="center"><img src="docs/architecture.svg" alt="Architecture: Browser, MCP clients and shoppers reach the dashboard, gateway and WordPress through Ingress; the gateway routes tool calls to woo-mcp, notes-mcp and everything-mcp, stores state in Postgres and calls the LLM API" width="100%"></p>
 
 ## Highlights
 
