@@ -96,9 +96,25 @@ This is the path of one call, for example `woo__list_orders` from Claude Code:
 8. The result goes back the same way.
 9. `callTool()` writes one audit row: user, server, tool, time, duration and result.
 
+Before step 6, `callTool()` also checks the rate limit and the tool permissions. See the next section.
+
 All tool calls go through `callTool()`.
 This includes calls from MCP clients and calls from the chat agent.
 Thus, routing, timeouts and the audit log are the same for each caller.
+
+## Tool permissions and rate limits
+
+Each server has a list of admin-only tools.
+By default, `woo__create_product` and `woo__update_order_status` are admin-only.
+An admin changes the list with the **Admins only** check box on the **Servers** page.
+
+- `listTools()` removes admin-only tools for members. Thus, members do not see them in MCP clients, in the chat or in the dashboard.
+- `callTool()` refuses a direct call from a member, and the audit log records it.
+- A change sends `tools/list_changed`, so open clients get the new list.
+
+`callTool()` also applies a rate limit of 60 calls each minute for each user.
+The limit uses a token bucket, so short bursts are possible.
+The limit is for each user, not for each key. Thus, more keys do not give more calls.
 
 ## Failure handling
 
@@ -158,7 +174,7 @@ On k3s, also enable `--secrets-encryption`, so etcd keeps the Secrets encrypted.
 - **One gateway replica.** MCP sessions are in memory. Two replicas would need sticky sessions or a shared session store.
 - **Polling for health.** The gateway checks each server every 10 seconds. A dashboard status can be up to 10 seconds old.
 - **Notes in memory.** `notes-mcp` loses its notes when its pod restarts. It is only a demo server.
-- **No per-role tool rules.** Each member can use each enabled tool. Stand-out item 2 would add this.
-- **No rate limits.** One user can use the LLM quota or load the store. Per-key rate limits would fix this.
+- **Two levels of tool rules.** A tool is for everyone or for admins only. Per-user rules would need a rule table.
+- **Rate limit in memory.** Each gateway replica has its own counters. Two replicas would need a shared store, for example Redis.
 - **All tools go to the LLM.** This is good for 24 tools. Hundreds of tools would need a "search tools" tool.
 - **`local-path` storage.** The data is on one node. This is good for a demo VPS, but not for high availability.

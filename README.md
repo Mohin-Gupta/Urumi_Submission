@@ -22,6 +22,7 @@ Each team member then uses all the tools through one URL and one personal API ke
 - **One endpoint for all tools.** The gateway merges the tools of each enabled server into one MCP endpoint at `/mcp`.
 - **Own WooCommerce MCP server.** It lists and creates products, and it lists, gets and updates orders.
 - **Team access.** Admins and members have personal API keys. The gateway stores keys hashed, and an admin can revoke a key immediately.
+- **Tool permissions and rate limits.** Admins can make a tool admin-only. Each user can make 60 tool calls each minute.
 - **Audit log.** The gateway records each tool call with the user, server, tool, time, duration and result.
 - **Chat agent.** The dashboard chat calls the same tools as the signed-in user.
 - **Failure isolation.** A slow or dead upstream server does not stop the other servers. Each call has a timeout.
@@ -59,6 +60,7 @@ All workloads run in the namespace `urumi`.
 NetworkPolicies deny all incoming traffic by default.
 Only the gateway can reach the MCP servers.
 Only `woo-mcp` and the ingress controller can reach WordPress.
+The MCP servers and the databases cannot connect to the internet.
 
 Each workload has readiness and liveness probes, and resource requests and limits.
 Our own containers run as non-root users with a read-only root filesystem.
@@ -222,7 +224,7 @@ The audit log shows these calls under your name, with the source "Chat".
 
 Example prompts:
 
-- "Create a product called Demo Mug priced at 299."
+- "Create a product called Demo Mug priced at 299." By default, only admins can create products.
 - "What orders came in today?"
 - "Add a team note for each of today's orders." This prompt uses tools from two servers.
 
@@ -233,6 +235,11 @@ Example prompts:
 | Revoke a key | **API keys → Revoke** | The next request with that key gets HTTP 401. |
 | Disable a server | **Servers → Disable** | Its tools go out of the tool list. Connected clients get a `tools/list_changed` notification. |
 | Remove a person | **Team → Remove** | All the keys of that person stop working. |
+| Make a tool admin-only | **Servers → tools → Admins only** | Members do not see the tool, and a direct call gets an error. |
+| See usage | **Metrics** | Calls, errors, and p50 and p95 latency for each server and tool, for the last 24 hours. |
+
+By default, `woo__create_product` and `woo__update_order_status` are admin-only.
+Members can still read products and orders.
 
 To see a dead upstream, stop one MCP server:
 
@@ -353,6 +360,7 @@ These values are the most useful. See [`values.yaml`](charts/platform/values.yam
 | `storageClass` | `""` | StorageClass for all volumes. Empty means the cluster default. |
 | `store.timezone` | `Asia/Kolkata` | Store timezone. "Today" in `list_orders` uses this timezone. |
 | `gateway.callTimeoutMs` | `30000` | Timeout for each tool call |
+| `gateway.rateLimitPerMinute` | `60` | Tool calls each minute for each user |
 | `gateway.seedServers` | 3 servers | Servers that the gateway registers at first start |
 | `llm.baseUrl` | Gemini | Any OpenAI-compatible API |
 | `llm.model` | `gemini-2.5-flash` | Model for the chat agent |
@@ -388,6 +396,8 @@ k3d.yaml         Local cluster config
 
 | Item | Status | Where |
 |---|---|---|
-| 6. Security hardening | SSRF protection for upstream URLs, upstream credentials encrypted at rest, NetworkPolicies that deny by default, non-root containers | [`urlGuard.ts`](apps/gateway/src/urlGuard.ts), [`crypto.ts`](apps/gateway/src/crypto.ts), [`networkpolicies.yaml`](charts/platform/templates/networkpolicies.yaml) |
-| 8. Observability (partial) | The dashboard shows why an upstream is unreachable, and why a call failed | [`upstreams.ts`](apps/gateway/src/upstreams.ts), Audit log page |
+| 2. Tool permissions | Admin-only tools are hidden from members and refused if called. Admins change them on the Servers page. | [`upstreams.ts`](apps/gateway/src/upstreams.ts) (`canUse`), [`mcp.ts`](apps/gateway/src/mcp.ts) (`callTool`), [Servers page](apps/dashboard/src/pages/Servers.tsx) |
+| 6. Security hardening | SSRF protection for upstream URLs, upstream credentials encrypted at rest, ingress and egress NetworkPolicies, non-root containers | [`urlGuard.ts`](apps/gateway/src/urlGuard.ts), [`crypto.ts`](apps/gateway/src/crypto.ts), [`networkpolicies.yaml`](charts/platform/templates/networkpolicies.yaml) |
+| 7. Scaling (rate limits only) | A token bucket for each user, shared by all keys of that user and the chat | [`rateLimit.ts`](apps/gateway/src/rateLimit.ts) |
+| 8. Observability | Metrics page with calls, error rate, and p50 and p95 latency for each server and tool. The dashboard also shows why an upstream is unreachable and why a call failed. | [Metrics page](apps/dashboard/src/pages/Metrics.tsx), `GET /api/metrics` in [`api.ts`](apps/gateway/src/api.ts) |
 | 9. Upgrades and rollback | Tested automatic and manual rollback | [Upgrade and roll back](#upgrade-and-roll-back) |

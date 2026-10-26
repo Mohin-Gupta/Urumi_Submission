@@ -172,6 +172,8 @@ const serverFields = z.object({
       value: z.string().min(1),
     }),
   ]),
+  // Upstream tool names (without the prefix) that only admins may see and call
+  adminOnlyTools: z.array(z.string().max(128)).max(500),
 });
 
 async function rejectPrivateUrl(url?: string) {
@@ -187,29 +189,33 @@ function credentialColumns(auth: z.infer<typeof serverFields>["auth"]) {
   return { header_name: auth.name, header_value_enc: encrypt(auth.value) };
 }
 
-api.get("/servers", (_req, res) => {
-  res.json(serverStatus());
+api.get("/servers", (req, res) => {
+  res.json(serverStatus(req.user.role));
 });
 
 api.post("/servers", requireAdmin, async (req, res) => {
-  const { auth, ...s } = parse(serverFields.partial({ enabled: true, auth: true }), req.body);
+  const { auth, ...s } = parse(serverFields.partial({ enabled: true, auth: true, adminOnlyTools: true }), req.body);
   await rejectPrivateUrl(s.url);
   const creds = credentialColumns(auth ?? { type: "none" });
   const { rows } = await db.query(
-    `insert into servers (slug, name, url, enabled, header_name, header_value_enc)
-     values ($1, $2, $3, $4, $5, $6) returning id`,
-    [s.slug, s.name, s.url, s.enabled ?? true, creds.header_name, creds.header_value_enc],
+    `insert into servers (slug, name, url, enabled, header_name, header_value_enc, admin_only_tools)
+     values ($1, $2, $3, $4, $5, $6, $7) returning id`,
+    [s.slug, s.name, s.url, s.enabled ?? true, creds.header_name, creds.header_value_enc, s.adminOnlyTools ?? []],
   );
   await reload(rows[0].id);
-  res.status(201).json(serverStatus().find((u) => u.id === rows[0].id));
+  res.status(201).json(serverStatus("admin").find((u) => u.id === rows[0].id));
 });
 
 api.patch("/servers/:id", requireAdmin, async (req, res) => {
   const id = idParam(req);
-  const { auth, ...fields } = parse(serverFields.partial(), req.body);
+  const { auth, adminOnlyTools, ...fields } = parse(serverFields.partial(), req.body);
   await rejectPrivateUrl(fields.url);
   // Leaving auth out keeps the stored credential, since the dashboard never sees it
-  const changes = Object.entries({ ...fields, ...(auth && credentialColumns(auth)) });
+  const changes = Object.entries({
+    ...fields,
+    ...(adminOnlyTools && { admin_only_tools: adminOnlyTools }),
+    ...(auth && credentialColumns(auth)),
+  });
   if (changes.length) {
     const { rowCount } = await db.query(
       `update servers set ${changes.map(([column], i) => `${column} = $${i + 2}`).join(", ")} where id = $1`,
@@ -218,7 +224,7 @@ api.patch("/servers/:id", requireAdmin, async (req, res) => {
     if (!rowCount) throw new HttpError(404, "Server not found");
   }
   await reload(id);
-  res.json(serverStatus().find((u) => u.id === id));
+  res.json(serverStatus("admin").find((u) => u.id === id));
 });
 
 api.delete("/servers/:id", requireAdmin, async (req, res) => {
@@ -249,4 +255,22 @@ api.get("/audit", async (req, res) => {
     [ownerFilter(req)],
   );
   res.json(rows);
+});
+
+// Metrics: call volume, errors and latency over the last 24 hours, from the audit log
+
+const statsBy = async (groupBy: "server_slug" | "server_slug, tool") =>
+  (
+    await db.query(
+      `select ${groupBy}, count(*)::int as calls, count(*) filter (where not ok)::int as failed,
+         percentile_cont(0.5) within group (order by duration_ms)::int as p50_ms,
+         percentile_cont(0.95) within group (order by duration_ms)::int as p95_ms,
+         max(at) as last_call
+       from audit_log where at > now() - interval '24 hours'
+       group by ${groupBy} order by calls desc limit 50`,
+    )
+  ).rows;
+
+api.get("/metrics", requireAdmin, async (_req, res) => {
+  res.json({ servers: await statsBy("server_slug"), tools: await statsBy("server_slug, tool") });
 });

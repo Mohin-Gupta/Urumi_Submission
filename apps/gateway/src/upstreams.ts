@@ -4,7 +4,7 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { config } from "./config.js";
 import { decrypt } from "./crypto.js";
-import { db } from "./db.js";
+import { db, type User } from "./db.js";
 import { errorMessage } from "./http.js";
 import { checkUpstreamUrl } from "./urlGuard.js";
 
@@ -16,7 +16,10 @@ type ServerRow = {
   header_name: string | null;
   header_value_enc: string | null;
   enabled: boolean;
+  admin_only_tools: string[];
 };
+
+type Role = User["role"];
 
 type Upstream = {
   server: ServerRow;
@@ -102,7 +105,12 @@ async function check(server: ServerRow): Promise<Upstream> {
   }
 }
 
-const toolSignature = () => listTools().map((t) => t.name).sort().join();
+// Members' lists are a subset of the admin list, so comparing names plus the admin-only flag catches every change
+const toolSignature = () =>
+  listTools("admin")
+    .map((t) => `${t.name}:${listTools("member").some((m) => m.name === t.name)}`)
+    .sort()
+    .join();
 
 async function refreshAll() {
   const before = toolSignature();
@@ -137,11 +145,15 @@ export async function reload(serverId: number) {
   await refresh();
 }
 
-export function listTools(): Tool[] {
+export const canUse = (server: ServerRow, tool: string, role: Role) =>
+  role === "admin" || !server.admin_only_tools.includes(tool);
+
+// Tools a role may use. Admin-only tools are hidden from members, not just blocked.
+export function listTools(role: Role): Tool[] {
   return [...upstreams.values()]
     .filter((u) => u.status === "connected")
     .flatMap((u) =>
-      u.tools.map((tool) => ({
+      u.tools.filter((tool) => canUse(u.server, tool.name, role)).map((tool) => ({
         ...tool,
         name: `${u.server.slug}${SEPARATOR}${tool.name}`,
         // Descriptions come from servers we don't control: label the source and cap the length
@@ -155,7 +167,7 @@ export function findUpstream(slug: string) {
 }
 
 // What the dashboard sees. Credentials never leave this module.
-export function serverStatus() {
+export function serverStatus(role: Role) {
   return [...upstreams.values()].map(({ server, status, tools, error, warning, checkedAt }) => ({
     id: server.id,
     slug: server.slug,
@@ -167,6 +179,13 @@ export function serverStatus() {
     error,
     warning,
     checkedAt,
-    tools: tools.map((t) => ({ name: `${server.slug}${SEPARATOR}${t.name}`, description: t.description })),
+    tools: tools
+      .filter((t) => canUse(server, t.name, role))
+      .map((t) => ({
+        name: `${server.slug}${SEPARATOR}${t.name}`,
+        tool: t.name,
+        description: t.description,
+        adminOnly: server.admin_only_tools.includes(t.name),
+      })),
   }));
 }

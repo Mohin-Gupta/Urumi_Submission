@@ -1,6 +1,15 @@
 export type User = { id: number; email: string; name: string; role: "admin" | "member" };
 export type TeamMember = User & { invited: boolean; created_at: string };
-export type Tool = { name: string; description?: string };
+export type Tool = { name: string; tool: string; description?: string; adminOnly: boolean };
+export type Stat = {
+  server_slug: string | null;
+  tool?: string;
+  calls: number;
+  failed: number;
+  p50_ms: number;
+  p95_ms: number;
+  last_call: string;
+};
 export type Server = {
   id: number;
   slug: string;

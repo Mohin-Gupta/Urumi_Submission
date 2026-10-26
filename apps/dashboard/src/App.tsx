@@ -3,6 +3,7 @@ import { api, type User } from "./api";
 import { Audit } from "./pages/Audit";
 import { Chat } from "./pages/Chat";
 import { Keys } from "./pages/Keys";
+import { Metrics } from "./pages/Metrics";
 import { Servers } from "./pages/Servers";
 import { SignIn } from "./pages/SignIn";
 import { Team } from "./pages/Team";
@@ -13,6 +14,7 @@ const PAGES = [
   { path: "/keys", label: "API keys", page: Keys },
   { path: "/team", label: "Team", page: Team, adminOnly: true },
   { path: "/audit", label: "Audit log", page: Audit },
+  { path: "/metrics", label: "Metrics", page: Metrics, adminOnly: true },
 ];
 
 function usePath() {

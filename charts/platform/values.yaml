@@ -11,6 +11,12 @@ ingress:
     podLabels:
       app.kubernetes.io/name: traefik
 
+# Where cluster DNS runs, so egress NetworkPolicies can allow name lookups
+dns:
+  namespace: kube-system
+  podLabels:
+    k8s-app: kube-dns
+
 # Empty means the cluster's default StorageClass
 storageClass: ""
 
@@ -24,8 +30,8 @@ certManager:
 images:
   mcpServers: urumi/mcp-servers:0.1.3
   everything: urumi/everything-mcp:2.0.1
-  gateway: urumi/gateway:0.4.2
-  dashboard: urumi/dashboard:0.2.2
+  gateway: urumi/gateway:0.5.0
+  dashboard: urumi/dashboard:0.3.0
 
 dashboard:
   resources:
@@ -35,9 +41,15 @@ dashboard:
 gateway:
   adminEmail: admin@example.com
   callTimeoutMs: 30000
+  # Tool calls per user per minute, across all their keys and the chat
+  rateLimitPerMinute: 60
   # Registered on first boot only; after that admins manage servers in the dashboard
   seedServers:
-    - { slug: woo, name: WooCommerce, url: "http://woo-mcp/mcp" }
+    - slug: woo
+      name: WooCommerce
+      url: "http://woo-mcp/mcp"
+      # Members can read the store; only admins can change it
+      adminOnlyTools: [create_product, update_order_status]
     - { slug: notes, name: Team Notes, url: "http://notes-mcp/mcp" }
     - { slug: everything, name: MCP Everything, url: "http://everything-mcp/mcp" }
   resources:

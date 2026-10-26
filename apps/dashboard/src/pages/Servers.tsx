@@ -86,6 +86,11 @@ function ServerRow({ server, isAdmin, onChange }: { server: Server; isAdmin: boo
   const remove = act(async () => {
     if (confirm(`Remove ${server.name}? Its tools disappear for everyone.`)) await api(`/servers/${server.id}`, { method: "DELETE" });
   });
+  const setAdminOnly = (tool: string, adminOnly: boolean) => {
+    const current = server.tools.filter((t) => t.adminOnly).map((t) => t.tool);
+    const next = adminOnly ? [...current, tool] : current.filter((t) => t !== tool);
+    act(() => api(`/servers/${server.id}`, { method: "PATCH", body: { adminOnlyTools: next } }))();
+  };
 
   if (editing) {
     return <ServerForm server={server} onSaved={() => (setEditing(false), onChange())} onCancel={() => setEditing(false)} />;
@@ -109,11 +114,17 @@ function ServerRow({ server, isAdmin, onChange }: { server: Server; isAdmin: boo
       </div>
       {(server.error || server.warning) && <p className="line-error">{server.error ?? server.warning}</p>}
       {open && (
-        <ul className="tools">
+        <ul className={isAdmin ? "tools tools-admin" : "tools"}>
           {server.tools.map((t) => (
             <li key={t.name}>
               <code>{t.name}</code>
               <span>{t.description}</span>
+              {isAdmin && (
+                <label className="check">
+                  <input type="checkbox" checked={t.adminOnly} onChange={(e) => setAdminOnly(t.tool, e.target.checked)} />
+                  Admins only
+                </label>
+              )}
             </li>
           ))}
         </ul>

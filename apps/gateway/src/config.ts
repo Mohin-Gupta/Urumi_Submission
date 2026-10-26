@@ -4,7 +4,12 @@ function env(name: string, fallback?: string) {
   return value;
 }
 
-const seedServers = JSON.parse(env("SEED_SERVERS", "[]")) as { slug: string; name: string; url: string }[];
+const seedServers = JSON.parse(env("SEED_SERVERS", "[]")) as {
+  slug: string;
+  name: string;
+  url: string;
+  adminOnlyTools?: string[];
+}[];
 
 export const config = {
   databaseUrl: env("DATABASE_URL"),
@@ -17,6 +22,7 @@ export const config = {
   internalHosts: new Set(seedServers.map((s) => new URL(s.url).hostname)),
   callTimeoutMs: Number(env("CALL_TIMEOUT_MS", "30000")),
   healthIntervalMs: Number(env("HEALTH_INTERVAL_MS", "10000")),
+  rateLimitPerMinute: Number(env("RATE_LIMIT_PER_MINUTE", "60")),
   connectTimeoutMs: 5000,
   llm: {
     baseUrl: env("LLM_BASE_URL"),

@@ -25,19 +25,19 @@ Keep answers short and mention order or product ids when you refer to them. Now 
 const toolText = (result: CallToolResult) =>
   result.content.map((c) => (c.type === "text" ? c.text : `[${c.type}]`)).join("\n").slice(0, MAX_TOOL_OUTPUT);
 
-// Our tool list, in the OpenAI function-calling format
-function functionTools() {
-  return listTools().map((t) => {
+// The tools this user may use, in the OpenAI function-calling format
+function functionTools(user: User) {
+  return listTools(user.role).map((t) => {
     const { $schema, ...parameters } = t.inputSchema as Record<string, unknown>;
     return { type: "function", function: { name: t.name, description: t.description, parameters } };
   });
 }
 
-async function complete(messages: Message[]) {
+async function complete(user: User, messages: Message[]) {
   const res = await fetch(`${config.llm.baseUrl}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${config.llm.apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: config.llm.model, messages, tools: functionTools() }),
+    body: JSON.stringify({ model: config.llm.model, messages, tools: functionTools(user) }),
     signal: AbortSignal.timeout(60_000),
   });
   const data = await res.json().catch(() => ({}));
@@ -56,7 +56,7 @@ export async function runChat(user: User, history: ChatTurn[]) {
   const steps: ToolStep[] = [];
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    const reply = await complete(messages);
+    const reply = await complete(user, messages);
     // Send back only standard fields; some providers reject extras like "reasoning"
     messages.push({ role: "assistant", content: reply.content, tool_calls: reply.tool_calls });
     if (!reply.tool_calls?.length) return { reply: reply.content ?? "", steps };

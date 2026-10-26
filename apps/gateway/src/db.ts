@@ -53,6 +53,8 @@ create table if not exists audit_log (
   error text,
   source text not null
 );
+-- Added after the first release, so existing databases get it too
+alter table servers add column if not exists admin_only_tools text[] not null default '{}';
 `;
 
 async function count(table: string) {
@@ -71,7 +73,12 @@ export async function migrate() {
   }
   if ((await count("servers")) === 0) {
     for (const s of config.seedServers) {
-      await db.query("insert into servers (slug, name, url) values ($1, $2, $3)", [s.slug, s.name, s.url]);
+      await db.query("insert into servers (slug, name, url, admin_only_tools) values ($1, $2, $3, $4)", [
+        s.slug,
+        s.name,
+        s.url,
+        s.adminOnlyTools ?? [],
+      ]);
     }
   }
 }

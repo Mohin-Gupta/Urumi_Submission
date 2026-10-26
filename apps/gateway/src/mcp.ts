@@ -14,7 +14,8 @@ import { config } from "./config.js";
 import { sha256 } from "./crypto.js";
 import { db, type User } from "./db.js";
 import { errorMessage } from "./http.js";
-import { SEPARATOR, events, findUpstream, listTools, refresh } from "./upstreams.js";
+import { takeToken } from "./rateLimit.js";
+import { SEPARATOR, canUse, events, findUpstream, listTools, refresh } from "./upstreams.js";
 
 const errorResult = (text: string): CallToolResult => ({ isError: true, content: [{ type: "text", text }] });
 
@@ -37,10 +38,15 @@ export async function callTool(user: User, name: string, args: Record<string, un
   const started = Date.now();
   const { slug, tool } = splitToolName(name);
   const upstream = slug ? findUpstream(slug) : undefined;
+  const waitSeconds = takeToken(user.id);
   let result: CallToolResult;
 
-  if (!upstream) {
+  if (waitSeconds) {
+    result = errorResult(`Rate limit reached (${config.rateLimitPerMinute} tool calls a minute). Try again in ${waitSeconds}s.`);
+  } else if (!upstream) {
     result = errorResult(`Unknown tool "${name}"`);
+  } else if (!canUse(upstream.server, tool, user.role)) {
+    result = errorResult(`Only admins can use "${name}"`);
   } else if (upstream.status !== "connected" || !upstream.client) {
     result = errorResult(`Server "${slug}" is ${upstream.status}${upstream.error ? `: ${upstream.error}` : ""}`);
   } else {
@@ -84,7 +90,7 @@ function createServer(user: User) {
     { name: "urumi-gateway", version: "0.1.0" },
     { capabilities: { tools: { listChanged: true } } },
   );
-  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools() }));
+  server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: listTools(user.role) }));
   server.setRequestHandler(CallToolRequestSchema, (req) =>
     callTool(user, req.params.name, req.params.arguments ?? {}, "mcp"),
   );

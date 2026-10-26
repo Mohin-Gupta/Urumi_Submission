@@ -22,9 +22,9 @@ An admin adds a credential for an upstream server one time.
 After that, each team member uses the server through the gateway.
 
 **What a member can do.**
-A member can call each tool of each enabled server.
+A member can call each tool that is not admin-only.
 For the store, the WooCommerce key has `read_write` scope.
-Thus, a member can create products and change order status, through the gateway, with the power of that key.
+By default, members can read products and orders, but only admins can create products or change order status.
 
 **What a member cannot do.**
 
@@ -33,10 +33,12 @@ Thus, a member can create products and change order status, through the gateway,
 - A member cannot reach the upstream server directly. A NetworkPolicy lets only the gateway pod connect.
 - A member cannot hide a call. The gateway writes each call to the audit log under that member.
 
+- A member cannot call an admin-only tool. The tool is not in the list, and a direct call gets an error and an audit row.
+
 **Remaining risk.**
-The credential has more power than some members need.
-Per-role tool rules (stand-out item 2) would limit it.
-Until then, an admin can revoke the key of the member or disable the server.
+The credential still has the full `read_write` scope in WooCommerce.
+If the gateway had a bug in its permission check, a member could use that scope.
+A second WooCommerce key with `read` scope only, for members, would add a second layer.
 
 ## Why client tokens do not go to upstream servers
 
@@ -70,7 +72,8 @@ What the gateway does:
 **Remaining risk.**
 A model can still follow injected text.
 For example, it can call a write tool on a different server.
-Stronger protection needs per-role tool rules, or a user confirmation before write tools.
+For members, admin-only tools limit this, because the model does not get those tools.
+For admins, a user confirmation before write tools would give stronger protection.
 
 ### Other risks from a bad server
 
@@ -83,11 +86,10 @@ Stronger protection needs per-role tool rules, or a user confirmation before wri
 | An admin adds a URL that points into the cluster or to cloud metadata | The SSRF guard refuses private, loopback, link-local and metadata addresses. It checks again before each new connection. |
 | The server shows a long or harmful error text | The gateway cuts the error text to 300 characters. React shows it as text, not HTML. |
 | The server pod attacks other pods | NetworkPolicies let only the gateway reach upstream pods. Only WordPress and the setup job can reach MariaDB. |
+| The server pod sends data out | Egress NetworkPolicies let upstream pods only use DNS. Only `woo-mcp` can also reach WordPress. They cannot reach the internet. |
 
-**Remaining risk.**
-The upstream pods have no egress policy.
-A bad server image in the cluster can connect to the internet.
-Default-deny egress rules would fix this.
+These egress rules apply to our in-cluster servers.
+An external server that an admin adds by URL is outside our control.
 
 ## What one team member can do to another
 
@@ -97,8 +99,8 @@ Default-deny egress rules would fix this.
 | Revoke the key of another member | No | The API changes only keys of the caller, unless the caller is an admin. |
 | Use the MCP session of another member | No | Each session belongs to one user. A request with another key gets HTTP 403. |
 | Read the audit rows of another member | No | Members see only their own rows. |
-| Change shared data | **Yes** | Store data and team notes are shared. A member can change order status, or add misleading notes. The audit log shows who did it. |
-| Use up shared limits | **Yes** | There are no rate limits. One member can use the LLM quota or load the store. |
+| Change shared data | **Partly** | Store writes are admin-only by default. Team notes are shared, so a member can add misleading notes. The audit log shows who did it. |
+| Use up shared limits | **Partly** | Each user can make 60 tool calls each minute. A member can still use some of the LLM quota, because chat requests have no separate limit. |
 
 **Admins have more power.**
 An admin can issue a key for a member.
@@ -113,11 +115,11 @@ A better design would let only members make their own keys.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. It is `Secure` when the public URL uses HTTPS. The API accepts only JSON bodies, so a form on another site cannot make a valid request.
 - **Upstream credentials.** AES-256-GCM. This protects database dumps and backups. It does not protect against a person who can read the Kubernetes Secrets.
 - **Containers.** Our containers run as non-root, with a read-only root filesystem, no added Linux capabilities, and no privilege escalation.
-- **Network.** All incoming traffic is denied by default. Only the Ingress exposes the storefront, the dashboard and the gateway.
+- **Network.** All incoming traffic is denied by default. Only the Ingress exposes the storefront, the dashboard and the gateway. Upstream MCP pods and databases have egress rules too.
 
 ## Known gaps
 
 - No limit on login attempts.
 - Traffic inside the cluster uses HTTP, not TLS.
 - Kubernetes Secrets are not encrypted in etcd unless `--secrets-encryption` is set on k3s.
-- No egress NetworkPolicies.
+- The gateway, WordPress and the setup job have no egress rules. They need the internet for external servers, the LLM and plugin downloads.

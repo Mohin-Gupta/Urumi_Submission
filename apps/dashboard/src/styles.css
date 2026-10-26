@@ -422,6 +422,25 @@ select {
   margin: 12px 0 0 28px;
 }
 
+.tools-admin li {
+  grid-template-columns: minmax(180px, 280px) 1fr auto;
+}
+
+.check {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.check input {
+  height: auto;
+}
+
+.section-title {
+  margin: 24px 0 10px;
+}
+
 .server-form {
   margin-left: 0;
 }

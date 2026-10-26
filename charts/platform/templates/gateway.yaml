@@ -125,6 +125,8 @@ spec:
               value: {{ toJson .Values.gateway.seedServers | quote }}
             - name: CALL_TIMEOUT_MS
               value: {{ .Values.gateway.callTimeoutMs | quote }}
+            - name: RATE_LIMIT_PER_MINUTE
+              value: {{ .Values.gateway.rateLimitPerMinute | quote }}
             - name: LLM_BASE_URL
               value: {{ .Values.llm.baseUrl }}
             - name: LLM_MODEL
