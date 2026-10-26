@@ -33,7 +33,7 @@ The gateway uses the SDK as a client to the upstreams and as a server to the tea
 Thus, the protocol code on the two sides is the same.
 
 **Stateless upstreams, stateful gateway.**
-Our MCP servers make a new MCP server object for each request.
+Our own MCP servers, `woo-mcp` and `notes-mcp`, make a new MCP server object for each request.
 A restart loses no state.
 The gateway keeps MCP sessions, because a session is necessary to send `tools/list_changed` notifications to clients.
 
@@ -68,7 +68,7 @@ The gateway then gives each tool a new name: `<server slug>__<tool name>`.
 | `notes` | `echo` | `notes__echo` |
 | `everything` | `echo` | `everything__echo` |
 
-We chose this scheme for these reasons:
+This prefix is our scheme for tool name collisions. We chose it for these reasons:
 
 - Two servers can have the same tool name with no conflict.
 - The name shows the user and the model which server does the work.
@@ -106,7 +106,7 @@ Thus, routing, timeouts and the audit log are the same for each caller.
 
 Each server has a list of admin-only tools.
 By default, `woo__create_product` and `woo__update_order_status` are admin-only.
-An admin changes the list with the **Admins only** check box on the **Servers** page.
+An admin changes the list with the **Admins only** switch in the server row on the **Servers** page.
 
 - `listTools()` removes admin-only tools for members. Thus, members do not see them in MCP clients, in the chat or in the dashboard.
 - `callTool()` refuses a direct call from a member, and the audit log records it.
@@ -141,6 +141,9 @@ The chat agent runs in the gateway process.
 3. If the LLM asks for tools, the gateway runs each tool with `callTool()` as the signed-in user.
 4. The gateway sends the results to the LLM, and step 2 starts again.
 5. The loop stops when the LLM gives an answer, or after 8 rounds.
+
+If the LLM fails after some tools ran, the chat still shows those tool calls with the error.
+Thus, the user can see changes that already happened, for example a new product.
 
 The agent uses the same tool list, routing and audit as MCP clients.
 The audit log shows its calls under the signed-in user, with the source "Chat".

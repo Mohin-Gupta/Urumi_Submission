@@ -32,7 +32,6 @@ By default, members can read products and orders, but only admins can create pro
 - A member cannot use the credential outside the defined tools. The gateway sends only `tools/call` requests for listed tools.
 - A member cannot reach the upstream server directly. A NetworkPolicy lets only the gateway pod connect.
 - A member cannot hide a call. The gateway writes each call to the audit log under that member.
-
 - A member cannot call an admin-only tool. The tool is not in the list, and a direct call gets an error and an audit row.
 
 **Remaining risk.**
@@ -64,7 +63,7 @@ What the gateway does:
 
 - It adds the server name to each description, for example `[MCP Everything] ...`. The user and the model can see the source.
 - It cuts each description to 1,000 characters.
-- It hides tools with bad names, so a server cannot use a name to look like a different server.
+- It starts each tool name with the prefix of its server. Thus, a server cannot give its tools the names of tools on a different server.
 - The system prompt tells the model that tool results are data, not instructions.
 - The chat shows each tool call and its arguments, so the user can see unexpected calls.
 - The chat stops after 8 rounds of tool calls.

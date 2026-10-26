@@ -64,7 +64,8 @@ Only the gateway can reach the MCP servers.
 Only `woo-mcp` and the ingress controller can reach WordPress.
 The MCP servers and the databases cannot connect to the internet.
 
-Each workload has readiness and liveness probes, and resource requests and limits.
+Each long-running workload has readiness and liveness probes.
+Each workload has resource requests and limits.
 Our own containers run as non-root users with a read-only root filesystem.
 
 ## Local setup
@@ -185,7 +186,8 @@ claude mcp add --transport http urumi http://app.127.0.0.1.nip.io/mcp \
   --header "Authorization: Bearer <your-key>"
 ```
 
-Then run `/mcp` in Claude Code to see the tools.
+Claude Code loads MCP servers when it starts.
+Thus, start a new Claude Code session, and then run `/mcp` to see the tools.
 
 **Cursor.** Add this entry to `.cursor/mcp.json`:
 
@@ -234,10 +236,10 @@ Example prompts:
 
 | Action | Where | Result |
 |---|---|---|
-| Revoke a key | **API keys → Revoke** | The next request with that key gets HTTP 401. |
-| Disable a server | **Servers → Disable** | Its tools go out of the tool list. Connected clients get a `tools/list_changed` notification. |
+| Revoke a key | **API keys → Revoke** | The next request with that key gets HTTP 401. Claude Code then asks you to re-authorize the server. |
+| Disable a server | **Servers →** click the server row **→ Disable** | Its tools go out of the tool list. Connected clients get a `tools/list_changed` notification. |
 | Remove a person | **Team → Remove** | All the keys of that person stop working. |
-| Make a tool admin-only | **Servers → tools → Admins only** | Members do not see the tool, and a direct call gets an error. |
+| Make a tool admin-only | **Servers →** click the server row **→ Admins only** switch | Members do not see the tool, and a direct call gets an error. |
 | See usage | **Metrics** | Calls, errors, and p50 and p95 latency for each server and tool, for the last 24 hours. |
 
 By default, `woo__create_product` and `woo__update_order_status` are admin-only.
@@ -360,6 +362,7 @@ These values are the most useful. See [`values.yaml`](charts/platform/values.yam
 | `ingress.tls` | `false` | Enables HTTPS on the Ingresses |
 | `imageRegistry` | `""` | Prefix for our images, with a trailing slash |
 | `storageClass` | `""` | StorageClass for all volumes. Empty means the cluster default. |
+| `store.woocommerceVersion` | `11.2.1` | WooCommerce version. The setup job installs it and runs the database updates. |
 | `store.timezone` | `Asia/Kolkata` | Store timezone. "Today" in `list_orders` uses this timezone. |
 | `gateway.callTimeoutMs` | `30000` | Timeout for each tool call |
 | `gateway.rateLimitPerMinute` | `60` | Tool calls each minute for each user |
@@ -385,7 +388,7 @@ apps/
   dashboard/     React dashboard
 charts/platform/ Helm chart with values-local.yaml and values-prod.yaml
 scripts/         Image build script
-docs/            Design note and threat model
+docs/            Design note, threat model and logo
 k3d.yaml         Local cluster config
 ```
 
@@ -399,7 +402,7 @@ k3d.yaml         Local cluster config
 | Item | Status | Where |
 |---|---|---|
 | 2. Tool permissions | Admin-only tools are hidden from members and refused if called. Admins change them on the Servers page. | [`upstreams.ts`](apps/gateway/src/upstreams.ts) (`canUse`), [`mcp.ts`](apps/gateway/src/mcp.ts) (`callTool`), [Servers page](apps/dashboard/src/pages/Servers.tsx) |
-| 6. Security hardening | SSRF protection for upstream URLs, upstream credentials encrypted at rest, ingress and egress NetworkPolicies, non-root containers | [`urlGuard.ts`](apps/gateway/src/urlGuard.ts), [`crypto.ts`](apps/gateway/src/crypto.ts), [`networkpolicies.yaml`](charts/platform/templates/networkpolicies.yaml) |
+| 6. Security hardening | SSRF protection for upstream URLs, upstream credentials encrypted at rest, ingress and egress NetworkPolicies, non-root containers, a sign-in attempt limit, and headers that stop the dashboard from being framed | [`urlGuard.ts`](apps/gateway/src/urlGuard.ts), [`crypto.ts`](apps/gateway/src/crypto.ts), [`networkpolicies.yaml`](charts/platform/templates/networkpolicies.yaml) |
 | 7. Scaling (rate limits only) | A token bucket for each user, shared by all keys of that user and the chat | [`rateLimit.ts`](apps/gateway/src/rateLimit.ts) |
 | 8. Observability | Metrics page with calls, error rate, and p50 and p95 latency for each server and tool. The dashboard also shows why an upstream is unreachable and why a call failed. | [Metrics page](apps/dashboard/src/pages/Metrics.tsx), `GET /api/metrics` in [`api.ts`](apps/gateway/src/api.ts) |
 | 9. Upgrades and rollback | Tested automatic and manual rollback | [Upgrade and roll back](#upgrade-and-roll-back) |
