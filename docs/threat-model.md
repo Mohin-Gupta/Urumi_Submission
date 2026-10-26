@@ -110,7 +110,8 @@ A better design would let only members make their own keys.
 
 ## Other controls
 
-- **Passwords.** scrypt with a random salt.
+- **Passwords.** scrypt with a random salt. Each email gets 10 sign-in attempts each minute.
+- **Dashboard pages.** The dashboard sends `X-Frame-Options: DENY`, so another site cannot put it in a frame and trick an admin into a click.
 - **API keys and session tokens.** 256 random bits each. SHA-256 is enough to keep these hashes safe.
 - **Session cookie.** `HttpOnly` and `SameSite=Strict`. It is `Secure` when the public URL uses HTTPS. The API accepts only JSON bodies, so a form on another site cannot make a valid request.
 - **Upstream credentials.** AES-256-GCM. This protects database dumps and backups. It does not protect against a person who can read the Kubernetes Secrets.
@@ -119,7 +120,7 @@ A better design would let only members make their own keys.
 
 ## Known gaps
 
-- No limit on login attempts.
+- Sign-in attempts are limited for each email, not for each IP address. One attacker can still try one password on many accounts.
 - Traffic inside the cluster uses HTTP, not TLS.
 - Kubernetes Secrets are not encrypted in etcd unless `--secrets-encryption` is set on k3s.
 - The gateway, WordPress and the setup job have no egress rules. They need the internet for external servers, the LLM and plugin downloads.

@@ -86,11 +86,8 @@ function ServerRow({ server, isAdmin, onChange }: { server: Server; isAdmin: boo
   const remove = act(async () => {
     if (confirm(`Remove ${server.name}? Its tools disappear for everyone.`)) await api(`/servers/${server.id}`, { method: "DELETE" });
   });
-  const setAdminOnly = (tool: string, adminOnly: boolean) => {
-    const current = server.tools.filter((t) => t.adminOnly).map((t) => t.tool);
-    const next = adminOnly ? [...current, tool] : current.filter((t) => t !== tool);
-    act(() => api(`/servers/${server.id}`, { method: "PATCH", body: { adminOnlyTools: next } }))();
-  };
+  const setAdminOnly = (tool: string, adminOnly: boolean) =>
+    act(() => api(`/servers/${server.id}/tools/${encodeURIComponent(tool)}`, { method: "PUT", body: { adminOnly } }))();
 
   if (editing) {
     return <ServerForm server={server} onSaved={() => (setEditing(false), onChange())} onCancel={() => setEditing(false)} />;

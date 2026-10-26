@@ -5,9 +5,10 @@ import { ErrorText, PageHeader } from "../ui";
 type Entry = ChatTurn & { steps?: ToolStep[] };
 
 const SUGGESTIONS = [
-  "What orders came in today?",
-  "Create a product called Demo Mug priced at 299",
-  "Add a team note for each of today's orders saying the customer needs a follow-up call",
+  { text: "What orders came in today?" },
+  // Creating products is admin-only by default
+  { text: "Create a product called Demo Mug priced at 299", adminOnly: true },
+  { text: "Add a team note for each of today's orders saying the customer needs a follow-up call" },
 ];
 
 function Steps({ steps }: { steps: ToolStep[] }) {
@@ -79,9 +80,9 @@ export function Chat({ user }: { user: User }) {
       <div className="chat">
         {entries.length === 0 && (
           <div className="suggestions">
-            {SUGGESTIONS.map((s) => (
-              <button key={s} type="button" className="ghost" onClick={() => send(s)}>
-                {s}
+            {SUGGESTIONS.filter((s) => !s.adminOnly || user.role === "admin").map(({ text }) => (
+              <button key={text} type="button" className="ghost" onClick={() => send(text)}>
+                {text}
               </button>
             ))}
           </div>

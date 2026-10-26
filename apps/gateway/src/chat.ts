@@ -45,7 +45,10 @@ async function complete(user: User, messages: Message[]) {
   // Gemini wraps errors in an array, OpenAI-style APIs don't
   const error = (Array.isArray(data) ? data[0] : data)?.error?.message;
   if (!res.ok) throw new HttpError(502, `The language model returned an error: ${error ?? res.status}`);
-  return data.choices[0].message as Extract<Message, { role: "assistant" }>;
+  // A safety block or an empty answer comes back with no message
+  const message = data.choices?.[0]?.message;
+  if (!message) throw new HttpError(502, "The language model returned no answer");
+  return message as Extract<Message, { role: "assistant" }>;
 }
 
 // The tool loop: ask the model, run the tools it asks for as this user, repeat until it answers
@@ -56,10 +59,17 @@ export async function runChat(user: User, history: ChatTurn[]) {
   const steps: ToolStep[] = [];
 
   for (let i = 0; i < MAX_STEPS; i++) {
-    const reply = await complete(user, messages);
+    let reply;
+    try {
+      reply = await complete(user, messages);
+    } catch (err) {
+      // Tools may already have changed things, so show them rather than only the error
+      if (!steps.length) throw err;
+      return { reply: `I couldn't finish: ${(err as Error).message}`, steps };
+    }
     // Send back only standard fields; some providers reject extras like "reasoning"
     messages.push({ role: "assistant", content: reply.content, tool_calls: reply.tool_calls });
-    if (!reply.tool_calls?.length) return { reply: reply.content ?? "", steps };
+    if (!reply.tool_calls?.length) return { reply: reply.content || "The model gave no answer.", steps };
 
     for (const call of reply.tool_calls) {
       let args: Record<string, unknown> = {};

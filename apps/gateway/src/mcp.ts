@@ -38,7 +38,8 @@ export async function callTool(user: User, name: string, args: Record<string, un
   const started = Date.now();
   const { slug, tool } = splitToolName(name);
   const upstream = slug ? findUpstream(slug) : undefined;
-  const waitSeconds = takeToken(user.id);
+  // Per user rather than per key, so making more keys doesn't raise the limit
+  const waitSeconds = takeToken(`tools:${user.id}`, config.rateLimitPerMinute);
   let result: CallToolResult;
 
   if (waitSeconds) {
@@ -72,10 +73,11 @@ export async function callTool(user: User, name: string, args: Record<string, un
 
 // Returns the key's owner even when revoked, so rejected calls can still be audited
 async function authenticate(header?: string): Promise<{ user?: User; error?: string }> {
-  const key = header?.match(/^Bearer (.+)$/)?.[1];
+  const key = header?.match(/^Bearer\s+(\S+)$/i)?.[1];
   if (!key) return { error: "Missing API key. Send it as: Authorization: Bearer <key>" };
   const { rows } = await db.query(
-    `update api_keys k set last_used_at = now() from users u
+    `update api_keys k set last_used_at = case when k.revoked_at is null then now() else k.last_used_at end
+     from users u
      where k.key_hash = $1 and u.id = k.user_id
      returning k.revoked_at, u.id, u.email, u.name, u.role`,
     [sha256(key)],
@@ -124,7 +126,7 @@ mcp.all("/mcp", async (req, res) => {
   const { user, error } = await authenticate(req.headers.authorization);
   if (error || !user) {
     if (user && req.body?.method === "tools/call") await audit(user, String(req.body.params?.name ?? "unknown"), 0, error!, "mcp");
-    return res.status(401).json(rpcError(error!));
+    return res.status(401).set("WWW-Authenticate", 'Bearer error="invalid_token"').json(rpcError(error!));
   }
 
   const sessionId = req.headers["mcp-session-id"] as string | undefined;

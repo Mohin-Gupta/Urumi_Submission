@@ -59,6 +59,7 @@ const order = (o: any) => ({
 });
 
 const today = () => new Intl.DateTimeFormat("en-CA", { timeZone: TIMEZONE }).format(new Date());
+const nextDay = (day: string) => new Date(Date.parse(`${day}T00:00:00Z`) + 86_400_000).toISOString().slice(0, 10);
 
 function createServer() {
   const server = new McpServer({ name: "woocommerce", version: "0.1.0" });
@@ -112,8 +113,9 @@ function createServer() {
         query: {
           status,
           per_page: limit,
+          // The whole day, up to midnight, in store time
           after: day && `${day}T00:00:00`,
-          before: day && `${day}T23:59:59`,
+          before: day && `${nextDay(day)}T00:00:00`,
         },
       });
       return jsonResult(orders.map(order));

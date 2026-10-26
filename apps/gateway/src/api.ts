@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import { encrypt, hashPassword, randomToken, sha256, verifyPassword } from "./crypto.js";
 import { db, type User } from "./db.js";
 import { HttpError, parse } from "./http.js";
+import { takeToken } from "./rateLimit.js";
 import { reload, serverStatus } from "./upstreams.js";
 import { checkUpstreamUrl } from "./urlGuard.js";
 
@@ -58,8 +59,13 @@ const idParam = (req: Request) => parse(z.coerce.number().int(), req.params.id);
 
 export const api = Router();
 
+const LOGIN_ATTEMPTS_PER_MINUTE = 10;
+
 api.post("/login", async (req, res) => {
   const { email, password } = parse(z.object({ email: z.string(), password: z.string() }), req.body);
+  // Slows password guessing against one account
+  const waitSeconds = takeToken(`login:${email.toLowerCase()}`, LOGIN_ATTEMPTS_PER_MINUTE);
+  if (waitSeconds) throw new HttpError(429, `Too many sign-in attempts. Try again in ${waitSeconds}s.`);
   const { rows } = await db.query("select id, password_hash from users where email = $1", [email.toLowerCase()]);
   if (!rows[0]?.password_hash || !(await verifyPassword(password, rows[0].password_hash))) {
     throw new HttpError(401, "Wrong email or password");
@@ -208,14 +214,10 @@ api.post("/servers", requireAdmin, async (req, res) => {
 
 api.patch("/servers/:id", requireAdmin, async (req, res) => {
   const id = idParam(req);
-  const { auth, adminOnlyTools, ...fields } = parse(serverFields.partial(), req.body);
+  const { auth, ...fields } = parse(serverFields.omit({ adminOnlyTools: true }).partial(), req.body);
   await rejectPrivateUrl(fields.url);
   // Leaving auth out keeps the stored credential, since the dashboard never sees it
-  const changes = Object.entries({
-    ...fields,
-    ...(adminOnlyTools && { admin_only_tools: adminOnlyTools }),
-    ...(auth && credentialColumns(auth)),
-  });
+  const changes = Object.entries({ ...fields, ...(auth && credentialColumns(auth)) });
   if (changes.length) {
     const { rowCount } = await db.query(
       `update servers set ${changes.map(([column], i) => `${column} = $${i + 2}`).join(", ")} where id = $1`,
@@ -223,6 +225,22 @@ api.patch("/servers/:id", requireAdmin, async (req, res) => {
     );
     if (!rowCount) throw new HttpError(404, "Server not found");
   }
+  await reload(id);
+  res.json(serverStatus("admin").find((u) => u.id === id));
+});
+
+// One tool at a time, changed inside the database, so two quick toggles can't overwrite each other
+api.put("/servers/:id/tools/:tool", requireAdmin, async (req, res) => {
+  const id = idParam(req);
+  const { adminOnly } = parse(z.object({ adminOnly: z.boolean() }), req.body);
+  const { rowCount } = await db.query(
+    `update servers set admin_only_tools = case when $3
+       then array_append(array_remove(admin_only_tools, $2), $2)
+       else array_remove(admin_only_tools, $2) end
+     where id = $1`,
+    [id, req.params.tool, adminOnly],
+  );
+  if (!rowCount) throw new HttpError(404, "Server not found");
   await reload(id);
   res.json(serverStatus("admin").find((u) => u.id === id));
 });
