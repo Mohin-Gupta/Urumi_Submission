@@ -29,8 +29,28 @@ function Steps({ steps }: { steps: ToolStep[] }) {
   );
 }
 
+// Keeps the conversation when the user switches pages; per user and per browser tab
+function useStoredEntries(userId: number) {
+  const storageKey = `chat:${userId}`;
+  const [entries, setEntries] = useState<Entry[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(storageKey) ?? "[]");
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(storageKey, JSON.stringify(entries));
+    } catch {
+      // Storage full or blocked: the chat still works, it just won't survive navigation
+    }
+  }, [storageKey, entries]);
+  return [entries, setEntries] as const;
+}
+
 export function Chat({ user }: { user: User }) {
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useStoredEntries(user.id);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();

@@ -50,16 +50,28 @@ export function PageHeader({ title, children }: { title: string; children?: Reac
   );
 }
 
+// The Clipboard API only exists on HTTPS and localhost; plain-HTTP setups need the older textarea route
+async function writeClipboard(text: string) {
+  if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+  const area = document.createElement("textarea");
+  area.value = text;
+  area.style.cssText = "position:fixed;opacity:0";
+  document.body.append(area);
+  area.select();
+  const ok = document.execCommand("copy");
+  area.remove();
+  if (!ok) throw new Error("Copy failed");
+}
+
 export function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const [label, setLabel] = useState("Copy");
+  const copy = () =>
+    writeClipboard(text)
+      .then(() => setLabel("Copied"), () => setLabel("Copy failed"))
+      .finally(() => setTimeout(() => setLabel("Copy"), 1500));
   return (
     <button type="button" className="ghost small" onClick={copy}>
-      {copied ? "Copied" : "Copy"}
+      {label}
     </button>
   );
 }

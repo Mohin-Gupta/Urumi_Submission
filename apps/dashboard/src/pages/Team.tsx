@@ -77,7 +77,7 @@ export function Team({ user }: { user: User }) {
                 <td>{m.email}</td>
                 <td>{m.role === "admin" ? "Admin" : "Member"}</td>
                 <td>{m.invited ? "Invite pending" : "Active"}</td>
-                <td>{formatTime(m.created_at)}</td>
+                <td className="nowrap">{formatTime(m.created_at)}</td>
                 <td>
                   <div className="row-actions">
                     <button className="ghost small" onClick={() => issueKey(m)}>

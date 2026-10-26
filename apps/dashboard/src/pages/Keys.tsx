@@ -70,9 +70,9 @@ export function Keys({ user }: { user: User }) {
                   <code>{k.prefix}…</code>
                 </td>
                 {isAdmin && <td>{k.user_email}</td>}
-                <td>{formatTime(k.created_at)}</td>
-                <td>{timeAgo(k.last_used_at)}</td>
-                <td>{k.revoked_at ? `Revoked ${timeAgo(k.revoked_at)}` : "Active"}</td>
+                <td className="nowrap">{formatTime(k.created_at)}</td>
+                <td className="nowrap">{timeAgo(k.last_used_at)}</td>
+                <td className="nowrap">{k.revoked_at ? `Revoked ${timeAgo(k.revoked_at)}` : "Active"}</td>
                 <td>
                   {!k.revoked_at && (
                     <button className="ghost small danger" onClick={() => revoke(k)}>

@@ -51,6 +51,8 @@ export function App() {
 
   const pages = PAGES.filter((p) => !p.adminOnly || user.role === "admin");
   const current = pages.find((p) => p.path === path) ?? pages[0];
+  // A page this user can't open falls back to the first one; keep the address bar honest
+  if (current.path !== path) window.history.replaceState(null, "", current.path);
   const link = (to: string) => (e: MouseEvent) => {
     e.preventDefault();
     navigate(to);

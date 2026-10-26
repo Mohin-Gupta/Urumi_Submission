@@ -61,7 +61,12 @@ code {
   min-height: 100vh;
 }
 
+/* Stays on screen at full height instead of growing with long pages */
 .sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -643,6 +648,8 @@ tr.dim td {
   }
 
   .sidebar {
+    position: static;
+    height: auto;
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
